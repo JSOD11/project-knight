@@ -5,11 +5,12 @@
 
 #include "RenderWindow.hpp"
 #include "Character.hpp"
+#include "Slime.hpp"
 #include "Entity.hpp"
 #include "Utils.hpp"
 
 void renderBackground(RenderWindow& window, SDL_Texture* bg1, SDL_Texture* bg2, SDL_Texture* bg3);
-void renderGround(RenderWindow& window, SDL_Texture* texture, size_t groundHeight);
+void renderGround(RenderWindow& window, SDL_Texture* texture);
 
 int main(int argc, char* argv[]) {
 
@@ -23,33 +24,50 @@ int main(int argc, char* argv[]) {
 
     RenderWindow window("Pearl Knight (Beta 0.0)", 1280, 720);
     
-    SDL_Texture* tileTexture = window.loadTexture("../graphics/medieval/Tiles/floor_tile_3.png");
+    SDL_Texture* tileTexture = window.loadTexture("../graphics/world/medieval/Tiles/floor_tile_3.png");
     if (!tileTexture) {
         std::cout << "Failed to load tile texture.\n";
         return 1;
     }
 
-    SDL_Texture* bg1 = window.loadTexture("../graphics/mountains/background1.png");
-    SDL_Texture* bg2 = window.loadTexture("../graphics/mountains/background2.png");
-    SDL_Texture* bg3 = window.loadTexture("../graphics/mountains/background3.png");
+    SDL_Texture* bg1 = window.loadTexture("../graphics/background/mountains/background1.png");
+    SDL_Texture* bg2 = window.loadTexture("../graphics/background/mountains/background2.png");
+    SDL_Texture* bg3 = window.loadTexture("../graphics/background/mountains/background3.png");
     
-    size_t groundHeight = 150;
     size_t sizeScaling = 2;
     size_t characterHeight = 64;
     size_t characterWidth = 128;
     size_t loopSpeed = 3;
     size_t movementSpeed = 5;
-    Vector2f startingPosition(200, window.getHeight() - groundHeight - sizeScaling * characterHeight + 40);
+    size_t groundHeight = window.getHeight() - sizeScaling * characterHeight - 110;
+    Vector2f startingPosition(200, groundHeight);
     SDL_Rect startingFrame;
     startingFrame.x = startingPosition.x, startingFrame.y = startingPosition.y, startingFrame.w = characterWidth * sizeScaling, startingFrame.h = characterHeight * sizeScaling;
 
     Character pearlKnight(startingPosition, startingFrame, characterWidth, characterHeight, loopSpeed, movementSpeed);
 
     // Load and initialize knight textures.
-    SDL_Texture* idleTexture = window.loadTexture("../graphics/knight/Idle.png");
-    SDL_Texture* attackTexture = window.loadTexture("../graphics/knight/Attacks.png");
-    SDL_Texture* runningTexture = window.loadTexture("../graphics/knight/Run.png");
-    pearlKnight.initializeMovementLoops(idleTexture, attackTexture, runningTexture);
+    SDL_Texture* idleTexture = window.loadTexture("../graphics/player/knight/Idle.png");
+    SDL_Texture* attackTexture = window.loadTexture("../graphics/player/knight/Attacks.png");
+    SDL_Texture* runningTexture = window.loadTexture("../graphics/player/knight/Run.png");
+    SDL_Texture* crouchTexture = window.loadTexture("../graphics/player/knight/crouch_idle.png");
+    pearlKnight.initializeMovementLoops(idleTexture, attackTexture, runningTexture, crouchTexture);
+
+    size_t slimeHeight = 128;
+    size_t slimeWidth = 128;
+    size_t slimeLoopSpeed = 7;
+    size_t slimeScaling = 1;
+    Vector2f slimePosition(500, groundHeight);
+    SDL_Rect slimeFrame;
+    slimeFrame.x = slimePosition.x, slimeFrame.y = slimePosition.y, slimeFrame.w = slimeWidth * slimeScaling, slimeFrame.h = slimeHeight * slimeScaling;
+    
+    Slime slime(slimePosition, slimeFrame, slimeWidth, slimeHeight, slimeLoopSpeed, movementSpeed);
+
+    // Load and initialize slime textures.
+    SDL_Texture* slimeIdleTexture = window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png");
+    SDL_Texture* slimeAttackTexture = nullptr; // window.loadTexture("../graphics/player/knight/Attacks.png");
+    SDL_Texture* slimeRunningTexture = nullptr; // window.loadTexture("../graphics/player/knight/Run.png");
+    slime.initializeMovementLoops(slimeIdleTexture, slimeAttackTexture, slimeRunningTexture);
 
     // Cap game at 60 FPS.
     const size_t targetFPS = 60;
@@ -77,17 +95,21 @@ int main(int argc, char* argv[]) {
                     break;
                 }
 
-                case SDLK_SPACE:
+                case SDLK_j:
                     if (!pearlKnight.currentlyAttacking()) pearlKnight.resetAttack0Frames();
                     pearlKnight.turnAttackingStatusOn();
                     break;
                 
                 case SDLK_a:
-                    if (!pearlKnight.currentlyAttacking()) pearlKnight.moveLeft(window);
+                    pearlKnight.moveLeft(window);
                     break;
 
                 case SDLK_d:
-                    if (!pearlKnight.currentlyAttacking()) pearlKnight.moveRight(window);
+                    pearlKnight.moveRight(window);
+                    break;
+
+                case SDLK_s:
+                    pearlKnight.startCrouching();
                     break;
                 }
                 break;
@@ -101,6 +123,10 @@ int main(int argc, char* argv[]) {
                 case SDLK_d:
                     pearlKnight.stopMovingRight();
                     break;
+
+                case SDLK_s:
+                    pearlKnight.stopCrouching();
+                    break;
                 }
                 break;
             }
@@ -113,7 +139,8 @@ int main(int argc, char* argv[]) {
         // Rendering.
         window.clearWindow();
         renderBackground(window, bg1, bg2, bg3);
-        renderGround(window, tileTexture, groundHeight);
+        renderGround(window, tileTexture);
+        slime.renderSlime(window);
         pearlKnight.renderCharacter(window);
         window.display();
 
@@ -136,7 +163,9 @@ void renderBackground(RenderWindow& window, SDL_Texture* bg1, SDL_Texture* bg2, 
     SDL_RenderCopy(window.getRenderer(), bg3, NULL, NULL);
 }
 
-void renderGround(RenderWindow& window, SDL_Texture* texture, size_t groundHeight) {
+void renderGround(RenderWindow& window, SDL_Texture* texture) {
+
+    size_t groundHeight = 150;
 
     size_t numTiles = window.getWidth() / 32;
 
