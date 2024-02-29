@@ -39,7 +39,7 @@ int main(int argc, char* argv[]) {
     size_t characterWidth = 128;
     size_t loopSpeed = 3;
     float movementSpeed = 6.5;
-    size_t jumpForce = 25;
+    size_t jumpForce = 27;
     size_t groundHeight = window.getHeight() - sizeScaling * characterHeight - 110;
     Vector2f startingPosition(200, groundHeight);
     SDL_Rect startingFrame;
@@ -48,11 +48,14 @@ int main(int argc, char* argv[]) {
     Character pearlKnight(startingPosition, startingFrame, characterWidth, characterHeight, loopSpeed, movementSpeed, jumpForce, groundHeight);
 
     // Load and initialize knight textures.
-    SDL_Texture* idleTexture = window.loadTexture("../graphics/player/knight/Idle.png");
-    SDL_Texture* attackTexture = window.loadTexture("../graphics/player/knight/Attacks.png");
-    SDL_Texture* runningTexture = window.loadTexture("../graphics/player/knight/Run.png");
-    SDL_Texture* crouchTexture = window.loadTexture("../graphics/player/knight/crouch_idle.png");
-    pearlKnight.initializeMovementLoops(idleTexture, attackTexture, runningTexture, crouchTexture);
+    std::vector<SDL_Texture*> textures;
+    textures.push_back(window.loadTexture("../graphics/player/knight/Idle.png"));
+    textures.push_back(window.loadTexture("../graphics/player/knight/Attacks.png"));
+    textures.push_back(window.loadTexture("../graphics/player/knight/Run.png"));
+    textures.push_back(window.loadTexture("../graphics/player/knight/crouch_idle.png"));
+    textures.push_back(window.loadTexture("../graphics/player/knight/Jump.png"));
+    textures.push_back(window.loadTexture("../graphics/player/knight/Health.png"));
+    pearlKnight.initializeMovementLoops(textures);
 
     size_t slimeHeight = 128;
     size_t slimeWidth = 128;
@@ -101,6 +104,10 @@ int main(int argc, char* argv[]) {
                     pearlKnight.turnAttackingStatusOn();
                     break;
                 
+                case SDLK_k:
+                    if (!pearlKnight.isHealing()) pearlKnight.startHealing();
+                    break;
+                
                 case SDLK_d:
                     pearlKnight.move(window, true);
                     break;
@@ -110,7 +117,7 @@ int main(int argc, char* argv[]) {
                     break;
                 
                 case SDLK_w:
-                    pearlKnight.jump();
+                    pearlKnight.startJump();
                     break;
 
                 case SDLK_s:
@@ -137,7 +144,6 @@ int main(int argc, char* argv[]) {
             }
         }
 
-        // TODO: Condense these into one move function based on which way we are facing.
         if (pearlKnight.isMovingRight()) pearlKnight.move(window, true);
         if (pearlKnight.isMovingLeft()) pearlKnight.move(window, false);
 
