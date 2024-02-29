@@ -2,146 +2,109 @@
 #include <SDL_image.h>
 
 #include "Character.hpp"
+#include "Game.hpp"
 
-Character::Character(Vector2f position, SDL_Rect startingFrame, size_t width, size_t height, size_t loopSpeed, size_t movementSpeed)
-    : position(position), currentFrame(startingFrame), width(width), height(height), loopSpeed(loopSpeed), movementSpeed(movementSpeed),
-    idleTexture(nullptr), attackTexture(nullptr) {
+Character::Character(Vector2f position, SDL_Rect startingFrame, size_t width, size_t height, size_t loopSpeed, size_t movementSpeed, float jumpForce, size_t groundHeight)
+    : position(position), currentFrame(startingFrame), width(width), height(height), loopSpeed(loopSpeed), movementSpeed(movementSpeed), jumpForce(jumpForce), groundHeight(groundHeight) {
     this->movingLeft = false;
     this->movingRight = false;
-    this->crouching = false;
     this->facingRight = true;
-    this->isAttacking = false;
+    this->airborne = false;
+    this->velocityY = 0;
 }
 
-void Character::initializeMovementLoops(SDL_Texture* idleTexture, SDL_Texture* attackTexture, SDL_Texture* runningTexture, SDL_Texture* crouchTexture) {    
 
-    // Load idle texture and create movement loop.
-    this->idleTexture = idleTexture;
-    this->idleFrame = 0;
-    if (!idleTexture)
-        std::cout << "Failed to load knight texture.\n";
-    for (size_t i = 0; i < 8; i++) {
+void initializeTextureLoop(Movement& movement, SDL_Texture*& tex, size_t N, size_t L, size_t width, size_t height) {
+
+    if (!tex) std::cout << "Failed to load texture.\n";
+
+    movement.texture = tex;
+    movement.frame = 0;
+    movement.isActive = false;
+
+    // N is the number of images in the loop. L is the length of a row in the png.
+    for (size_t i = 0; i < N; i++) {
         SDL_Rect frame;
-        frame.x = (i % 2) * width;
-        frame.y = (i / 2) * height;
+        frame.x = (i % L) * width;
+        frame.y = (i / L) * height;
         frame.w = width;
         frame.h = height;
-        this->idleFrames.push_back(frame);
-    }
-
-    // Load attack texture.
-    this->attackTexture = attackTexture;
-    if (!attackTexture)
-        std::cout << "Failed to load attack texture.\n";
-
-    // Create attack0 movement loop.
-    this->attack0Frame = 0;
-    for (size_t i = 0; i < 7; i++) {
-        SDL_Rect frame;
-        frame.x = i * width;
-        frame.y = 0;
-        frame.w = width;
-        frame.h = height;
-        this->attack0Frames.push_back(frame);
-    }
-
-    // Load running texture.
-    this->runningTexture = runningTexture;
-    if (!runningTexture)
-        std::cout << "Failed to load running texture.\n";
-    // Create running movement loop.
-    this->runningFrame = 0;
-    for (size_t i = 0; i < 8; i++) {
-        SDL_Rect frame;
-        frame.x = (i % 2) * width;
-        frame.y = (i / 2) * height;
-        frame.w = width;
-        frame.h = height;
-        this->runningFrames.push_back(frame);
-    }
-
-    // Load crouching texture.
-    this->crouchTexture = crouchTexture;
-    if (!crouchTexture)
-        std::cout << "Failed to load crouch texture.\n";
-    // Create running movement loop.
-    this->crouchFrame = 0;
-    for (size_t i = 0; i < 8; i++) {
-        SDL_Rect frame;
-        frame.x = (i % 2) * width;
-        frame.y = (i / 2) * height;
-        frame.w = width;
-        frame.h = height;
-        this->crouchFrames.push_back(frame);
+        movement.frameVector.push_back(frame);
     }
 }
 
+void Character::initializeMovementLoops(SDL_Texture* idleTexture, SDL_Texture* attackTexture, SDL_Texture* runningTexture, SDL_Texture* crouchTexture) {
+    initializeTextureLoop(this->idle, idleTexture, 8, 2, this->width, this->height);
+    initializeTextureLoop(this->attack0, attackTexture, 7, 8, this->width, this->height);
+    initializeTextureLoop(this->run, runningTexture, 8, 2, this->width, this->height);
+    initializeTextureLoop(this->crouch, crouchTexture, 8, 2, this->width, this->height);
+}
+
+void Character::renderTexture(RenderWindow& window, SDL_Texture* texture, std::vector<SDL_Rect>& frames, SDL_RendererFlip& flipType, size_t loopSpeed, size_t& frame) {
+    SDL_RenderCopyEx(window.getRenderer(), texture, &frames[frame / loopSpeed], &this->currentFrame, 0, nullptr, flipType);
+    if (frame == frames.size() * loopSpeed - 1) frame = 0;
+    else frame++;
+}
 
 // `renderCharacter()`
 // Renders a dynamic character to the screen.
 void Character::renderCharacter(RenderWindow& window) {
+
+    this->obeyGravity();
+
+    // std::cout << this->position.x << ", " << this->position.y << std::endl;
+
     SDL_RendererFlip flipType = this->facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
-    if (this->isAttacking) {
-        SDL_RenderCopyEx(window.getRenderer(), this->attackTexture, &this->attack0Frames[this->attack0Frame / this->loopSpeed], &this->currentFrame, 0, nullptr, flipType);
-        if (this->attack0Frame == this->attack0Frames.size() * this->loopSpeed - 1) {
-            this->isAttacking = false;
-            this->resetAttack0Frames();
-        } else {
-            this->attack0Frame++;
-        }
-    } else if ((this->isMovingLeft() || this->isMovingRight()) && !(this->isMovingLeft() && this->isMovingRight())) {
-        SDL_RenderCopyEx(window.getRenderer(), this->runningTexture, &this->runningFrames[this->runningFrame / this->loopSpeed], &this->currentFrame, 0, nullptr, flipType);
-        if (this->runningFrame == this->runningFrames.size() * this->loopSpeed - 1) this->runningFrame = 0;
-        else this->runningFrame++;
+    if (this->attack0.isActive) {
+        this->renderTexture(window, this->attack0.texture, this->attack0.frameVector, flipType, this->loopSpeed, this->attack0.frame);
+        if (this->attack0.frame == 0) this->attack0.isActive = false;
     } else if (this->isCrouching()) {
-        SDL_RenderCopyEx(window.getRenderer(), this->crouchTexture, &this->crouchFrames[this->crouchFrame / this->loopSpeed], &this->currentFrame, 0, nullptr, flipType);
-        if (this->crouchFrame == this->crouchFrames.size() * this->loopSpeed - 1) this->crouchFrame = 0;
-        else this->crouchFrame++;
-    } else {
-        SDL_RenderCopyEx(window.getRenderer(), this->idleTexture, &this->idleFrames[this->idleFrame / this->loopSpeed], &this->currentFrame, 0, nullptr, flipType);
-        if (this->idleFrame == this->idleFrames.size() * this->loopSpeed - 1) this->idleFrame = 0;
-        else this->idleFrame++;
+        this->renderTexture(window, this->crouch.texture, this->crouch.frameVector, flipType, this->loopSpeed, this->crouch.frame);
+    } else if ((this->isMovingLeft() || this->isMovingRight()) && !(this->isMovingLeft() && this->isMovingRight())) {
+        this->renderTexture(window, this->run.texture, this->run.frameVector, flipType, 2, this->run.frame);
+    }  else {
+        this->renderTexture(window, this->idle.texture, this->idle.frameVector, flipType, this->loopSpeed, this->idle.frame);
     }
 }
 
 bool Character::currentlyAttacking() {
-    return this->isAttacking;
+    return this->attack0.isActive;
 }
 
 void Character::resetAttack0Frames() {
-    this->attack0Frame = 0;
+    this->attack0.frame = 0;
 }
 
 void Character::turnAttackingStatusOn() {
-    this->isAttacking = true;
-}
-
-bool Character::isMovingLeft() {
-    return this->movingLeft;
+    this->attack0.isActive = true;
 }
 
 bool Character::isMovingRight() {
     return this->movingRight;
 }
 
-void Character::moveLeft(RenderWindow& window) {
-    (void) window;
-    this->movingLeft = true;
-    if (!this->currentlyAttacking()) this->facingRight = false;
-    size_t movementDelta = this->movementSpeed;
-    if (this->currentlyAttacking() || this->isMovingRight()) movementDelta = 0;
-    if (-100 < this->position.x) {
+bool Character::isMovingLeft() {
+    return this->movingLeft;
+}
+
+void Character::move(RenderWindow& window, bool moveRight) {
+    if (moveRight) {
+        this->movingRight = true;
+        if (!this->currentlyAttacking()) this->facingRight = true;
+    } else {
+        this->movingLeft = true;
+        if (!this->currentlyAttacking()) this->facingRight = false;
+    }
+
+    float movementDelta = this->movementSpeed;
+    if ((this->currentlyAttacking() && !this->isAirborne()) || this->isCrouching() || (this->isMovingRight() && this->isMovingLeft())) movementDelta = 0;
+    
+    if (this->isMovingLeft() && -100 < this->position.x) {
         this->position.x -= movementDelta;
         this->currentFrame.x -= movementDelta;
     }
-}
 
-void Character::moveRight(RenderWindow& window) {
-    this->movingRight = true;
-    if (!this->currentlyAttacking()) this->facingRight = true;
-    size_t movementDelta = this->movementSpeed;
-    if (this->currentlyAttacking() || this->isMovingLeft()) movementDelta = 0;
-    if (this->position.x < window.getWidth() - 150) {
+    if (this->isMovingRight() && this->position.x < window.getWidth() - 150) {
         this->position.x += movementDelta;
         this->currentFrame.x += movementDelta;
     }
@@ -156,13 +119,36 @@ void Character::stopMovingRight() {
 }
 
 void Character::startCrouching() {
-    this->crouching = true;
+    this->crouch.isActive = true;
 }
 
 void Character::stopCrouching() {
-    this->crouching = false;
+    this->crouch.isActive = false;
 }
 
 bool Character::isCrouching() {
-    return this->crouching;
+    return this->crouch.isActive;
+}
+
+void Character::jump() {
+    if (!this->isAirborne()) {
+        this->airborne = true;
+        this->velocityY = this->jumpForce;
+    }
+}
+
+bool Character::isAirborne() {
+    return this->airborne;
+}
+
+void Character::obeyGravity() {
+    if (this->position.y >= this->groundHeight && this->velocityY <= 0) {
+        this->airborne = false;
+        this->position.y = groundHeight;
+        this->velocityY = 0;
+    } else if (this->velocityY > 0 || this->position.y < this->groundHeight) {
+        this->position.y -= this->velocityY;
+        this->velocityY += GRAVITY;
+    }
+    this->currentFrame.y = this->position.y;
 }

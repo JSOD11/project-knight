@@ -38,13 +38,14 @@ int main(int argc, char* argv[]) {
     size_t characterHeight = 64;
     size_t characterWidth = 128;
     size_t loopSpeed = 3;
-    size_t movementSpeed = 5;
+    float movementSpeed = 6.5;
+    size_t jumpForce = 25;
     size_t groundHeight = window.getHeight() - sizeScaling * characterHeight - 110;
     Vector2f startingPosition(200, groundHeight);
     SDL_Rect startingFrame;
     startingFrame.x = startingPosition.x, startingFrame.y = startingPosition.y, startingFrame.w = characterWidth * sizeScaling, startingFrame.h = characterHeight * sizeScaling;
 
-    Character pearlKnight(startingPosition, startingFrame, characterWidth, characterHeight, loopSpeed, movementSpeed);
+    Character pearlKnight(startingPosition, startingFrame, characterWidth, characterHeight, loopSpeed, movementSpeed, jumpForce, groundHeight);
 
     // Load and initialize knight textures.
     SDL_Texture* idleTexture = window.loadTexture("../graphics/player/knight/Idle.png");
@@ -100,12 +101,16 @@ int main(int argc, char* argv[]) {
                     pearlKnight.turnAttackingStatusOn();
                     break;
                 
-                case SDLK_a:
-                    pearlKnight.moveLeft(window);
+                case SDLK_d:
+                    pearlKnight.move(window, true);
                     break;
 
-                case SDLK_d:
-                    pearlKnight.moveRight(window);
+                case SDLK_a:
+                    pearlKnight.move(window, false);
+                    break;
+                
+                case SDLK_w:
+                    pearlKnight.jump();
                     break;
 
                 case SDLK_s:
@@ -133,8 +138,8 @@ int main(int argc, char* argv[]) {
         }
 
         // TODO: Condense these into one move function based on which way we are facing.
-        if (pearlKnight.isMovingLeft()) pearlKnight.moveLeft(window);
-        if (pearlKnight.isMovingRight()) pearlKnight.moveRight(window);
+        if (pearlKnight.isMovingRight()) pearlKnight.move(window, true);
+        if (pearlKnight.isMovingLeft()) pearlKnight.move(window, false);
 
         // Rendering.
         window.clearWindow();
