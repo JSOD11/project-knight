@@ -37,15 +37,14 @@ int main(int argc, char* argv[]) {
     size_t sizeScaling = 2;
     size_t characterHeight = 64;
     size_t characterWidth = 128;
-    size_t loopSpeed = 3;
     float movementSpeed = 6.5;
-    size_t jumpForce = 27;
+    size_t jumpForce = 15;
     size_t groundHeight = window.getHeight() - sizeScaling * characterHeight - 110;
     Vector2f startingPosition(200, groundHeight);
     SDL_Rect startingFrame;
     startingFrame.x = startingPosition.x, startingFrame.y = startingPosition.y, startingFrame.w = characterWidth * sizeScaling, startingFrame.h = characterHeight * sizeScaling;
 
-    Character pearlKnight(startingPosition, startingFrame, characterWidth, characterHeight, loopSpeed, movementSpeed, jumpForce, groundHeight);
+    Character pearlKnight(startingPosition, startingFrame, characterWidth, characterHeight, movementSpeed, jumpForce, groundHeight);
 
     // Load and initialize knight textures.
     std::vector<SDL_Texture*> textures;
@@ -55,6 +54,8 @@ int main(int argc, char* argv[]) {
     textures.push_back(window.loadTexture("../graphics/player/knight/crouch_idle.png"));
     textures.push_back(window.loadTexture("../graphics/player/knight/Jump.png"));
     textures.push_back(window.loadTexture("../graphics/player/knight/Health.png"));
+    textures.push_back(window.loadTexture("../graphics/player/knight/Pray.png"));
+    textures.push_back(window.loadTexture("../graphics/player/knight/attack_from_air.png"));
     pearlKnight.initializeMovementLoops(textures);
 
     size_t slimeHeight = 128;
@@ -100,28 +101,35 @@ int main(int argc, char* argv[]) {
                 }
 
                 case SDLK_j:
-                    if (!pearlKnight.currentlyAttacking()) pearlKnight.resetAttack0Frames();
-                    pearlKnight.turnAttackingStatusOn();
+                    if (pearlKnight.isAirborne() && pearlKnight.crouch.isActive()) {
+                        pearlKnight.airAttack.start();
+                    } else {
+                        pearlKnight.startAttack();
+                    }
                     break;
                 
                 case SDLK_k:
-                    if (!pearlKnight.isHealing()) pearlKnight.startHealing();
+                    if (!pearlKnight.heal.isActive()) pearlKnight.heal.start();
                     break;
                 
                 case SDLK_d:
-                    pearlKnight.move(window, true);
+                    pearlKnight.startMovingRight();
                     break;
 
                 case SDLK_a:
-                    pearlKnight.move(window, false);
+                    pearlKnight.startMovingLeft();
                     break;
                 
                 case SDLK_w:
                     pearlKnight.startJump();
                     break;
 
+                case SDLK_m:
+                    pearlKnight.pray.start();
+                    break;
+
                 case SDLK_s:
-                    pearlKnight.startCrouching();
+                    pearlKnight.crouch.start();
                     break;
                 }
                 break;
@@ -135,17 +143,20 @@ int main(int argc, char* argv[]) {
                 case SDLK_d:
                     pearlKnight.stopMovingRight();
                     break;
+                
+                case SDLK_m:
+                    pearlKnight.pray.stop();
+                    break;
 
                 case SDLK_s:
-                    pearlKnight.stopCrouching();
+                    pearlKnight.crouch.stop();
                     break;
                 }
                 break;
             }
         }
 
-        if (pearlKnight.isMovingRight()) pearlKnight.move(window, true);
-        if (pearlKnight.isMovingLeft()) pearlKnight.move(window, false);
+        pearlKnight.move(window);
 
         // Rendering.
         window.clearWindow();
