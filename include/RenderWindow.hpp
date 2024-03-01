@@ -23,8 +23,8 @@ class RenderWindow {
         SDL_Texture* loadTexture(const char* filePath);
         void destroyTexture(SDL_Texture* texture);
         int getRefreshRate();
-        size_t getWidth();
-        size_t getHeight();
+        int getWidth();
+        int getHeight();
         SDL_Renderer* getRenderer();
 };
 

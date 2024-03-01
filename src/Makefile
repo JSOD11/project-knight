@@ -10,7 +10,6 @@ LIBS := -lSDL2 -lSDL2_image
 # Source files and Object files
 SOURCES := $(wildcard *.cpp) $(wildcard ../some_other_directory/*.cpp)
 OBJECTS := $(SOURCES:.cpp=.o)
-DEPS := $(OBJECTS:.o=.d) # Dependency files
 
 # Executable name
 EXEC := main
@@ -21,14 +20,10 @@ all: $(EXEC)
 $(EXEC): $(OBJECTS)
 	$(CXX) $(LDFLAGS) $(OBJECTS) -o $(EXEC) $(LIBS)
 
-# Target for compiling and generating dependency info
 %.o: %.cpp
-	$(CXX) $(CFLAGS) $(INCLUDES) -MMD -c $< -o $@
-
-# Include the dependencies
--include $(DEPS)
+	$(CXX) $(CFLAGS) $(INCLUDES) -c $< -o $@
 
 clean:
-	rm -f $(OBJECTS) $(EXEC) $(DEPS)
+	rm -f $(OBJECTS) $(EXEC)
 
 .PHONY: all clean

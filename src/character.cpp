@@ -4,7 +4,7 @@
 #include "Character.hpp"
 #include "Game.hpp"
 
-Character::Character(Vector2f position, SDL_Rect startingFrame, size_t width, size_t height, size_t movementSpeed, float jumpForce, size_t groundHeight)
+Character::Character(Vector2f position, SDL_Rect startingFrame, size_t width, size_t height, float movementSpeed, float jumpForce, int groundHeight)
     : position(position), currentFrame(startingFrame), width(width), height(height), movementSpeed(movementSpeed), jumpForce(jumpForce), groundHeight(groundHeight) {
     this->movingLeft = false;
     this->movingRight = false;
@@ -13,42 +13,45 @@ Character::Character(Vector2f position, SDL_Rect startingFrame, size_t width, si
 }
 
 
-void initializeTextureLoop(Command& command, Movement& movement, SDL_Texture*& tex, size_t start, size_t N, size_t L, size_t width, size_t height, size_t loopSpeed) {
+void initializeTextureLoop(Command& command, Movement& movement, std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>& texture, size_t width, size_t height) {
 
-    if (!tex) std::cout << "Failed to load texture.\n";
+    movement.texture = std::get<0>(texture);
+    if (!movement.texture) std::cout << "Failed to load texture.\n";
 
-    movement.texture = tex;
+    size_t start = std::get<1>(texture);
+    size_t N = std::get<2>(texture);
+    size_t rowLength = std::get<3>(texture);
     movement.frame = 0;
-    movement.loopSpeed = loopSpeed;
+    movement.loopFrames = std::get<4>(texture);
     movement.isActive = false;
 
     command.movement = &movement;
 
-    // N is the number of images in the loop. L is the length of a row in the png.
+    // N is the number of images in the loop. rowLength is the length of a row in the png.
     for (size_t i = start; i < N; i++) {
         SDL_Rect frame;
-        frame.x = (i % L) * width;
-        frame.y = (i / L) * height;
+        frame.x = (i % rowLength) * width;
+        frame.y = (i / rowLength) * height;
         frame.w = width;
         frame.h = height;
         movement.frameVector.push_back(frame);
     }
 }
 
-void Character::initializeMovementLoops(std::vector<SDL_Texture*>& textures) {
-    initializeTextureLoop(this->idle, this->idleMovement, textures[0], 0, 8, 2, this->width, this->height, 3);
-    initializeTextureLoop(this->attack, this->attackMovement, textures[1], 0, 7, 8, this->width, this->height, 3);
-    initializeTextureLoop(this->run, this->runMovement, textures[2], 0, 8, 2, this->width, this->height, 2);
-    initializeTextureLoop(this->crouch, this->crouchMovement, textures[3], 0, 8, 2, this->width, this->height, 3);
-    initializeTextureLoop(this->jump, this->jumpMovement, textures[4], 0, 8, 2, this->width, this->height, 3);
-    initializeTextureLoop(this->heal, this->healMovement, textures[5], 0, 8, 2, this->width, this->height, 3);
-    initializeTextureLoop(this->pray, this->prayMovement, textures[6], 2, 10, 4, this->width, this->height, 5);
-    initializeTextureLoop(this->airAttack, this->airAttackMovement, textures[7], 0, 3, 2, this->width, this->height, 3);
+void Character::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>>& textures) {
+    initializeTextureLoop(this->idle, this->idleMovement, textures[0], this->width, this->height);
+    if (textures.size() > 1) initializeTextureLoop(this->attack, this->attackMovement, textures[1], this->width, this->height);
+    if (textures.size() > 2) initializeTextureLoop(this->run, this->runMovement, textures[2], this->width, this->height);
+    if (textures.size() > 3) initializeTextureLoop(this->crouch, this->crouchMovement, textures[3], this->width, this->height);
+    if (textures.size() > 4) initializeTextureLoop(this->jump, this->jumpMovement, textures[4], this->width, this->height);
+    if (textures.size() > 5) initializeTextureLoop(this->heal, this->healMovement, textures[5], this->width, this->height);
+    if (textures.size() > 6) initializeTextureLoop(this->pray, this->prayMovement, textures[6], this->width, this->height);
+    if (textures.size() > 7) initializeTextureLoop(this->airAttack, this->airAttackMovement, textures[7], this->width, this->height);
 }
 
 void Character::renderTexture(RenderWindow& window, Movement& movement, SDL_RendererFlip& flipType) {
-    SDL_RenderCopyEx(window.getRenderer(), movement.texture, &movement.frameVector[movement.frame / movement.loopSpeed], &this->currentFrame, 0, nullptr, flipType);
-    if (movement.frame >= movement.frameVector.size() * movement.loopSpeed - 1) movement.frame = 0;
+    SDL_RenderCopyEx(window.getRenderer(), movement.texture, &movement.frameVector[movement.frame / movement.loopFrames], &this->currentFrame, 0, nullptr, flipType);
+    if (movement.frame >= movement.frameVector.size() * movement.loopFrames - 1) movement.frame = 0;
     else movement.frame++;
 }
 
@@ -56,6 +59,7 @@ void Character::renderTexture(RenderWindow& window, Movement& movement, SDL_Rend
 // Renders a dynamic character to the screen.
 void Character::renderCharacter(RenderWindow& window) {
 
+    this->move(window);
     this->obeyGravity();
 
     // std::cout << this->position.x << ", " << this->position.y << std::endl;

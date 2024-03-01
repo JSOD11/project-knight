@@ -5,6 +5,7 @@
 #include <SDL_image.h>
 
 #include "RenderWindow.hpp"
+#include "Game.hpp"
 
 class Character {
     private:
@@ -12,8 +13,7 @@ class Character {
         SDL_Rect currentFrame;
         size_t width;
         size_t height;
-        size_t loopSpeed;
-        size_t movementSpeed;
+        float movementSpeed;
         bool movingLeft;
         bool movingRight;
 
@@ -21,35 +21,50 @@ class Character {
         // If not facing right, then we flip the animations.
         bool facingRight;
 
-        SDL_Texture* idleTexture;
-        std::vector<SDL_Rect> idleFrames;
-        size_t idleFrame;
+        float velocityY;
+        float jumpForce;
+        int groundHeight;
 
-        SDL_Texture* attackTexture;
-        bool isAttacking;
-        
-        std::vector<SDL_Rect> attack0Frames;
-        size_t attack0Frame;
-
-        SDL_Texture* runningTexture;
-        std::vector<SDL_Rect> runningFrames;
-        size_t runningFrame;
+        Movement idleMovement;
+        Movement attackMovement;
+        Movement runMovement;
+        Movement crouchMovement;
+        Movement jumpMovement;
+        Movement healMovement;
+        Movement prayMovement;
+        Movement airAttackMovement;
     
     public:
-        Character(Vector2f position, SDL_Rect startingFrame, size_t width, size_t height, size_t loopSpeed, size_t movementSpeed);
-        void initializeMovementLoops(SDL_Texture* idleTexture, SDL_Texture* attackTexture, SDL_Texture* runningTexture);
+        Character(Vector2f position, SDL_Rect startingFrame, size_t width, size_t height, float movementSpeed, float jumpForce, int groundHeight);
+        void initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>>& textures);
         void renderCharacter(RenderWindow& window);
+        void renderTexture(RenderWindow& window, Movement& movement, SDL_RendererFlip& flipType);
 
-        bool currentlyAttacking();
-        void resetAttack0Frames();
-        void turnAttackingStatusOn();
+        Command idle;
+        Command attack;
+        void startAttack();
+        Command run;
 
-        bool isMovingLeft();
+        void startMovingRight();
+        void startMovingLeft();
+        void move(RenderWindow& window);
         bool isMovingRight();
-        void moveLeft(RenderWindow& window);
-        void moveRight(RenderWindow& window);
-        void stopMovingLeft();
+        bool isMovingLeft();
         void stopMovingRight();
+        void stopMovingLeft();
+
+        Command crouch;
+        Command jump;
+
+        void startJump();
+        bool isAirborne();
+        void obeyGravity();
+
+        Command heal;
+        Command pray;
+        Command airAttack;
+
+        bool isImmobile();
 };
 
 #endif // CHARACTER_H

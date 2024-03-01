@@ -64,12 +64,12 @@ int RenderWindow::getRefreshRate() {
     return mode.refresh_rate;
 }
 
-size_t RenderWindow::getWidth() {
-    return this->width;
+int RenderWindow::getWidth() {
+    return (int)this->width;
 }
 
-size_t RenderWindow::getHeight() {
-    return this->height;
+int RenderWindow::getHeight() {
+    return (int)this->height;
 }
 
 SDL_Renderer* RenderWindow::getRenderer() {
