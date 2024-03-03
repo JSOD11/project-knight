@@ -9,7 +9,7 @@ Character::Character(Info info) : info(info) {
 }
 
 
-void initializeTextureLoop(Command& command, Movement& movement, std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>& texture, size_t width, size_t height) {
+void initializeTextureLoop(Command& command, Movement& movement, std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>& texture, Vector2i pngSize) {
 
     movement.texture = std::get<0>(texture);
     if (!movement.texture) std::cout << "Failed to load texture.\n";
@@ -26,58 +26,43 @@ void initializeTextureLoop(Command& command, Movement& movement, std::tuple<SDL_
     // N is the number of images in the loop. rowLength is the length of a row in the png.
     for (size_t i = start; i < N; i++) {
         SDL_Rect frame;
-        frame.x = (i % rowLength) * width;
-        frame.y = (i / rowLength) * height;
-        frame.w = width;
-        frame.h = height;
+        frame.x = (i % rowLength) * pngSize.x;
+        frame.y = (i / rowLength) * pngSize.y;
+        frame.w = pngSize.x;
+        frame.h = pngSize.y;
         movement.frameVector.push_back(frame);
     }
 }
 
 void Character::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>>& textures) {
-    initializeTextureLoop(this->idle, this->idleMovement, textures[0], this->info.pngWidth, this->info.pngHeight);
-    if (textures.size() > 1) initializeTextureLoop(this->attack, this->attackMovement, textures[1], this->info.pngWidth, this->info.pngHeight);
-    if (textures.size() > 2) initializeTextureLoop(this->run, this->runMovement, textures[2], this->info.pngWidth, this->info.pngHeight);
-    if (textures.size() > 3) initializeTextureLoop(this->hurt, this->hurtMovement, textures[3], this->info.pngWidth, this->info.pngHeight);
-    if (textures.size() > 4) initializeTextureLoop(this->crouch, this->crouchMovement, textures[4], this->info.pngWidth, this->info.pngHeight);
-    if (textures.size() > 5) initializeTextureLoop(this->jump, this->jumpMovement, textures[5], this->info.pngWidth, this->info.pngHeight);
-    if (textures.size() > 6) initializeTextureLoop(this->heal, this->healMovement, textures[6], this->info.pngWidth, this->info.pngHeight);
-    if (textures.size() > 7) initializeTextureLoop(this->pray, this->prayMovement, textures[7], this->info.pngWidth, this->info.pngHeight);
-    if (textures.size() > 8) initializeTextureLoop(this->airAttack, this->airAttackMovement, textures[8], this->info.pngWidth, this->info.pngHeight);
+    initializeTextureLoop(this->idle, this->idleMovement, textures[0], this->info.pngSize);
+    if (textures.size() > 1) initializeTextureLoop(this->attack, this->attackMovement, textures[1], this->info.pngSize);
+    if (textures.size() > 2) initializeTextureLoop(this->run, this->runMovement, textures[2], this->info.pngSize);
+    if (textures.size() > 3) initializeTextureLoop(this->hurt, this->hurtMovement, textures[3], this->info.pngSize);
+    if (textures.size() > 4) initializeTextureLoop(this->crouch, this->crouchMovement, textures[4], this->info.pngSize);
+    if (textures.size() > 5) initializeTextureLoop(this->jump, this->jumpMovement, textures[5], this->info.pngSize);
+    if (textures.size() > 6) initializeTextureLoop(this->heal, this->healMovement, textures[6], this->info.pngSize);
+    if (textures.size() > 7) initializeTextureLoop(this->pray, this->prayMovement, textures[7], this->info.pngSize);
+    if (textures.size() > 8) initializeTextureLoop(this->airAttack, this->airAttackMovement, textures[8], this->info.pngSize);
 }
 
 void Character::dealDamage() {
+    SDL_Rect attackBox = this->info.currentFrame;
+    if (this->info.facingRight) attackBox.x += this->info.attackBox.x - this->info.attackBox.w;
+    else attackBox.x += this->info.sizeScaling * this->info.pngSize.x - this->info.attackBox.x;
+    attackBox.y += this->info.attackBox.y;
 
-    SDL_Rect hitbox;
+    attackBox.w = this->info.attackBox.w;
+    attackBox.h = this->info.attackBox.h;
 
-    hitbox.x = enemies[0]->info.currentFrame.x + 36;
-    hitbox.y = enemies[0]->info.currentFrame.y + 96;
-    hitbox.w = 42;
-    hitbox.h = 28;
-
-    size_t attackWidth = 40;
-
-    SDL_Rect attackFrame;
-    if (this->info.facingRight) attackFrame.x = this->info.currentFrame.x + 96 * 2 - attackWidth;
-    else attackFrame.x = this->info.currentFrame.x + 2 * this->info.pngWidth - 96 * 2;
-    attackFrame.y = this->info.currentFrame.y;
-    attackFrame.w = attackWidth;
-    attackFrame.h = this->info.currentFrame.h;
-
-    // for (Character& enemy : enemies) {
-    if (collision(&attackFrame, &hitbox)) {
-        // std::cout << "Collision" << std::endl;
-        // std::cout << "pos x coord: " << this->info.position.x << std::endl;
-        // std::cout << "frame x coord: " << this->info.currentFrame.x << std::endl;
-        // std::cout << "attack x coord: " << attackFrame.x << std::endl;
-        // std::cout << "slime x coord: " << enemies[0]->info.currentFrame.x << "\n" << std::endl;
-
-        if (hitbox.x + 21 < this->info.currentFrame.x + 124) enemies[0]->info.facingRight = true;
-        else enemies[0]->info.facingRight = false;
-
-        enemies[0]->takeDamage();
+    for (Character*& enemy : enemies) {
+        // Fix this movement speed hack when we create an enemy class and take the knight out of enemies.
+        if (this->info.movementSpeed != enemy->info.movementSpeed && collision(&attackBox, &enemy->info.hitbox)) {
+            if (enemy->info.centerCoordinates.x < this->info.centerCoordinates.x) enemy->info.facingRight = true;
+            else enemy->info.facingRight = false;
+            enemy->takeDamage();
+        }
     }
-    // }
 }
 
 void Character::renderTexture(RenderWindow& window, Movement& movement, SDL_RendererFlip& flipType) {
@@ -161,15 +146,44 @@ void Character::move(RenderWindow& window) {
 
     float movementDelta = this->info.movementSpeed;
     if ((this->isImmobile() && !this->isAirborne()) || (this->isMovingRight() && this->isMovingLeft())) movementDelta = 0;
-    
-    if (this->isMovingLeft() && -100 < this->info.position.x) {
-        this->info.position.x -= movementDelta;
-        this->info.currentFrame.x -= movementDelta;
-    }
 
     if (this->isMovingRight() && this->info.position.x < window.getWidth() - 150) {
-        this->info.position.x += movementDelta;
-        this->info.currentFrame.x += movementDelta;
+        this->changeCoordinates(true, movementDelta);
+    }
+    
+    if (this->isMovingLeft() && -100 < this->info.position.x) {
+        this->changeCoordinates(true, -movementDelta);
+    }
+    this->info.currentFrame.x = this->info.position.x;
+}
+
+void Character::changeCoordinates(bool x, int delta) {
+    if (x) {
+        this->info.position.x += delta;
+        this->info.currentFrame.x += delta;
+        this->info.hitbox.x += delta;
+        this->info.centerCoordinates.x += delta;
+    } else {
+        this->info.position.y += delta;
+        this->info.currentFrame.y += delta;
+        this->info.hitbox.y += delta;
+        this->info.centerCoordinates.y += delta;
+    }
+}
+
+void Character::setCoordinate(bool x, int coordinate) {
+    if (x) {
+        int delta = coordinate - this->info.position.x;
+        this->info.position.x += delta;
+        this->info.currentFrame.x += delta;
+        this->info.hitbox.x += delta;
+        this->info.centerCoordinates.x += delta;
+    } else {
+        int delta = coordinate - this->info.position.y;
+        this->info.position.y += delta;
+        this->info.currentFrame.y += delta;
+        this->info.hitbox.y += delta;
+        this->info.centerCoordinates.y += delta;
     }
 }
 
@@ -206,15 +220,14 @@ void Character::obeyGravity() {
     if ((this->info.position.y > this->info.groundHeight) || (this->info.position.y >= this->info.groundHeight && this->info.velocityY < 0)) {
         // If we are below the ground or touching it with negative velocity, stop jumping.
         this->jump.stop();
-        this->info.position.y = this->info.groundHeight;
+        this->setCoordinate(false, this->info.groundHeight);
         this->info.velocityY = 0;
     } else if (this->info.velocityY > 0 || this->info.position.y < this->info.groundHeight) {
         // If we have positive velocity or are airborne, obey gravity.
-        this->info.position.y -= this->info.velocityY;
+        this->changeCoordinates(false, -this->info.velocityY);
         this->info.velocityY += GRAVITY;
         if (this->info.velocityY < -10) this->info.velocityY = -10;
     }
-    this->info.currentFrame.y = this->info.position.y;
 }
 
 bool Character::isImmobile() {

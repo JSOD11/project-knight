@@ -3,7 +3,7 @@
 
 #include "Entity.hpp"
 
-Entity::Entity(Vector2f position, SDL_Texture* texture) 
+Entity::Entity(Vector2i position, SDL_Texture* texture) 
     :position(position), texture(texture) {
     this->currentFrame.x = 0;
     this->currentFrame.y = 0;
