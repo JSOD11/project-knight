@@ -4,12 +4,8 @@
 #include "Character.hpp"
 #include "Game.hpp"
 
-Character::Character(Vector2f position, SDL_Rect startingFrame, size_t width, size_t height, float movementSpeed, float jumpForce, int groundHeight)
-    : position(position), currentFrame(startingFrame), width(width), height(height), movementSpeed(movementSpeed), jumpForce(jumpForce), groundHeight(groundHeight) {
-    this->movingLeft = false;
-    this->movingRight = false;
-    this->facingRight = true;
-    this->velocityY = 0;
+Character::Character(Info info) : info(info) {
+
 }
 
 
@@ -39,18 +35,53 @@ void initializeTextureLoop(Command& command, Movement& movement, std::tuple<SDL_
 }
 
 void Character::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>>& textures) {
-    initializeTextureLoop(this->idle, this->idleMovement, textures[0], this->width, this->height);
-    if (textures.size() > 1) initializeTextureLoop(this->attack, this->attackMovement, textures[1], this->width, this->height);
-    if (textures.size() > 2) initializeTextureLoop(this->run, this->runMovement, textures[2], this->width, this->height);
-    if (textures.size() > 3) initializeTextureLoop(this->crouch, this->crouchMovement, textures[3], this->width, this->height);
-    if (textures.size() > 4) initializeTextureLoop(this->jump, this->jumpMovement, textures[4], this->width, this->height);
-    if (textures.size() > 5) initializeTextureLoop(this->heal, this->healMovement, textures[5], this->width, this->height);
-    if (textures.size() > 6) initializeTextureLoop(this->pray, this->prayMovement, textures[6], this->width, this->height);
-    if (textures.size() > 7) initializeTextureLoop(this->airAttack, this->airAttackMovement, textures[7], this->width, this->height);
+    initializeTextureLoop(this->idle, this->idleMovement, textures[0], this->info.pngWidth, this->info.pngHeight);
+    if (textures.size() > 1) initializeTextureLoop(this->attack, this->attackMovement, textures[1], this->info.pngWidth, this->info.pngHeight);
+    if (textures.size() > 2) initializeTextureLoop(this->run, this->runMovement, textures[2], this->info.pngWidth, this->info.pngHeight);
+    if (textures.size() > 3) initializeTextureLoop(this->hurt, this->hurtMovement, textures[3], this->info.pngWidth, this->info.pngHeight);
+    if (textures.size() > 4) initializeTextureLoop(this->crouch, this->crouchMovement, textures[4], this->info.pngWidth, this->info.pngHeight);
+    if (textures.size() > 5) initializeTextureLoop(this->jump, this->jumpMovement, textures[5], this->info.pngWidth, this->info.pngHeight);
+    if (textures.size() > 6) initializeTextureLoop(this->heal, this->healMovement, textures[6], this->info.pngWidth, this->info.pngHeight);
+    if (textures.size() > 7) initializeTextureLoop(this->pray, this->prayMovement, textures[7], this->info.pngWidth, this->info.pngHeight);
+    if (textures.size() > 8) initializeTextureLoop(this->airAttack, this->airAttackMovement, textures[8], this->info.pngWidth, this->info.pngHeight);
+}
+
+void Character::dealDamage() {
+
+    SDL_Rect hitbox;
+
+    hitbox.x = enemies[0]->info.currentFrame.x + 36;
+    hitbox.y = enemies[0]->info.currentFrame.y + 96;
+    hitbox.w = 42;
+    hitbox.h = 28;
+
+    size_t attackWidth = 40;
+
+    SDL_Rect attackFrame;
+    if (this->info.facingRight) attackFrame.x = this->info.currentFrame.x + 96 * 2 - attackWidth;
+    else attackFrame.x = this->info.currentFrame.x + 2 * this->info.pngWidth - 96 * 2;
+    attackFrame.y = this->info.currentFrame.y;
+    attackFrame.w = attackWidth;
+    attackFrame.h = this->info.currentFrame.h;
+
+    // for (Character& enemy : enemies) {
+    if (collision(&attackFrame, &hitbox)) {
+        // std::cout << "Collision" << std::endl;
+        // std::cout << "pos x coord: " << this->info.position.x << std::endl;
+        // std::cout << "frame x coord: " << this->info.currentFrame.x << std::endl;
+        // std::cout << "attack x coord: " << attackFrame.x << std::endl;
+        // std::cout << "slime x coord: " << enemies[0]->info.currentFrame.x << "\n" << std::endl;
+
+        if (hitbox.x + 21 < this->info.currentFrame.x + 124) enemies[0]->info.facingRight = true;
+        else enemies[0]->info.facingRight = false;
+
+        enemies[0]->takeDamage();
+    }
+    // }
 }
 
 void Character::renderTexture(RenderWindow& window, Movement& movement, SDL_RendererFlip& flipType) {
-    SDL_RenderCopyEx(window.getRenderer(), movement.texture, &movement.frameVector[movement.frame / movement.loopFrames], &this->currentFrame, 0, nullptr, flipType);
+    SDL_RenderCopyEx(window.getRenderer(), movement.texture, &movement.frameVector[movement.frame / movement.loopFrames], &this->info.currentFrame, 0, nullptr, flipType);
     if (movement.frame >= movement.frameVector.size() * movement.loopFrames - 1) movement.frame = 0;
     else movement.frame++;
 }
@@ -59,14 +90,15 @@ void Character::renderTexture(RenderWindow& window, Movement& movement, SDL_Rend
 // Renders a dynamic character to the screen.
 void Character::renderCharacter(RenderWindow& window) {
 
-    this->move(window);
-    this->obeyGravity();
+    // std::cout << this->info.position.x << ", " << this->info.position.y << std::endl;
+    // std::cout << this->info.velocityY << std::endl;
 
-    // std::cout << this->position.x << ", " << this->position.y << std::endl;
-    // std::cout << this->velocityY << std::endl;
-
-    SDL_RendererFlip flipType = this->facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
-    if (this->attack.isActive()) {
+    SDL_RendererFlip flipType = this->info.facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
+    if (this->hurt.isActive()) {
+        this->renderTexture(window, this->hurtMovement, flipType);
+        if (this->hurtMovement.frame == 0) this->hurt.stop();
+    } else if (this->attack.isActive()) {
+        if (this->attack.movement->frame == 3 * this->attack.movement->loopFrames) this->dealDamage();
         this->renderTexture(window, this->attackMovement, flipType);
         if (this->attackMovement.frame == 0) this->attack.stop();
     } else if (this->isAirborne()) {
@@ -74,10 +106,10 @@ void Character::renderCharacter(RenderWindow& window) {
             this->renderTexture(window, this->airAttackMovement, flipType);
             if (this->airAttackMovement.frame == 0) this->airAttack.stop();
         } else {
-            int frame = -this->velocityY / 4 + 4;
+            int frame = -this->info.velocityY / 4 + 4;
             if (frame < 0) frame = 0;
             if (frame > 7) frame = 7;
-            SDL_RenderCopyEx(window.getRenderer(), this->jumpMovement.texture, &this->jumpMovement.frameVector[frame], &this->currentFrame, 0, nullptr, flipType);
+            SDL_RenderCopyEx(window.getRenderer(), this->jumpMovement.texture, &this->jumpMovement.frameVector[frame], &this->info.currentFrame, 0, nullptr, flipType);
         }
     } else if (this->heal.isActive()) {
         this->renderTexture(window, this->healMovement, flipType);
@@ -91,85 +123,100 @@ void Character::renderCharacter(RenderWindow& window) {
     } else {
         this->renderTexture(window, this->idleMovement, flipType);
     }
+
+    this->move(window);
+    this->obeyGravity();
 }
 
 void Character::startAttack() {
     this->heal.stop();
-    this->attackMovement.isActive = true;
+    this->attack.start();
+}
+
+void Character::takeDamage() {
+    this->attack.stop();
+    this->run.stop();
+    this->crouch.stop();
+    this->heal.stop();
+    this->pray.stop();
+
+    this->hurt.start();
 }
 
 void Character::startMovingRight() {
-    this->movingRight = true;
+    this->info.movingRight = true;
 }
 
 void Character::startMovingLeft() {
-    this->movingLeft = true;
+    this->info.movingLeft = true;
 }
 
 void Character::move(RenderWindow& window) {
     if (this->isMovingRight()) {
-        if (!this->attack.isActive()) this->facingRight = true;
+        if (!this->attack.isActive()) this->info.facingRight = true;
     } else if (this->isMovingLeft()) {
-        this->movingLeft = true;
-        if (!this->attack.isActive()) this->facingRight = false;
+        this->info.movingLeft = true;
+        if (!this->attack.isActive()) this->info.facingRight = false;
     }
 
-    float movementDelta = this->movementSpeed;
+    float movementDelta = this->info.movementSpeed;
     if ((this->isImmobile() && !this->isAirborne()) || (this->isMovingRight() && this->isMovingLeft())) movementDelta = 0;
     
-    if (this->isMovingLeft() && -100 < this->position.x) {
-        this->position.x -= movementDelta;
-        this->currentFrame.x -= movementDelta;
+    if (this->isMovingLeft() && -100 < this->info.position.x) {
+        this->info.position.x -= movementDelta;
+        this->info.currentFrame.x -= movementDelta;
     }
 
-    if (this->isMovingRight() && this->position.x < window.getWidth() - 150) {
-        this->position.x += movementDelta;
-        this->currentFrame.x += movementDelta;
+    if (this->isMovingRight() && this->info.position.x < window.getWidth() - 150) {
+        this->info.position.x += movementDelta;
+        this->info.currentFrame.x += movementDelta;
     }
 }
 
 bool Character::isMovingRight() {
-    return this->movingRight;
+    return this->info.movingRight;
 }
 
 bool Character::isMovingLeft() {
-    return this->movingLeft;
+    return this->info.movingLeft;
 }
 
 void Character::stopMovingRight() {
-    this->movingRight = false;
+    this->info.movingRight = false;
 }
 
 void Character::stopMovingLeft() {
-    this->movingLeft = false;
+    this->info.movingLeft = false;
 }
 
 
 void Character::startJump() {
     if (!this->isAirborne()) {
         this->heal.stop();
-
-        this->jumpMovement.isActive = true;
-        this->velocityY = this->jumpForce;
+        this->jump.start();
+        this->info.velocityY = this->info.jumpForce;
     }
 }
 
 bool Character::isAirborne() {
-    return this->jumpMovement.isActive;
+    return this->jump.isActive();
 }
 
 void Character::obeyGravity() {
-    if (this->position.y >= this->groundHeight && this->velocityY <= 0) {
-        this->jumpMovement.isActive = false;
-        this->position.y = groundHeight;
-        this->velocityY = 0;
-    } else if (this->velocityY > 0 || this->position.y < this->groundHeight) {
-        this->position.y -= this->velocityY;
-        this->velocityY += GRAVITY;
+    if ((this->info.position.y > this->info.groundHeight) || (this->info.position.y >= this->info.groundHeight && this->info.velocityY < 0)) {
+        // If we are below the ground or touching it with negative velocity, stop jumping.
+        this->jump.stop();
+        this->info.position.y = this->info.groundHeight;
+        this->info.velocityY = 0;
+    } else if (this->info.velocityY > 0 || this->info.position.y < this->info.groundHeight) {
+        // If we have positive velocity or are airborne, obey gravity.
+        this->info.position.y -= this->info.velocityY;
+        this->info.velocityY += GRAVITY;
+        if (this->info.velocityY < -10) this->info.velocityY = -10;
     }
-    this->currentFrame.y = this->position.y;
+    this->info.currentFrame.y = this->info.position.y;
 }
 
 bool Character::isImmobile() {
-    return this->attackMovement.isActive || this->healMovement.isActive || this->crouchMovement.isActive || this->prayMovement.isActive;
+    return this->hurt.isActive() || this->attack.isActive() || this->heal.isActive() || this->crouch.isActive() || this->pray.isActive();
 }

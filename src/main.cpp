@@ -8,8 +8,29 @@
 #include "Entity.hpp"
 #include "Utils.hpp"
 
+std::vector<Character*> enemies;
+
 void renderBackground(RenderWindow& window, SDL_Texture* bg1, SDL_Texture* bg2, SDL_Texture* bg3);
 void renderGround(RenderWindow& window, SDL_Texture* texture);
+
+Character* initializeCharacter(size_t sizeScaling, size_t pngWidth, size_t pngHeight, size_t movementSpeed, size_t jumpForce, int groundHeight, size_t posX) {
+    Info info = {
+        .pngWidth = pngWidth,
+        .pngHeight = pngHeight,
+        .movementSpeed = movementSpeed,
+        .jumpForce = jumpForce,
+        .groundHeight = groundHeight,
+        .position = Vector2f(posX, groundHeight),
+        .movingLeft = false,
+        .movingRight = false,
+        .facingRight = true,
+        .velocityY = 0
+    };
+    info.currentFrame.x = info.position.x, info.currentFrame.y = info.position.y, info.currentFrame.w = info.pngWidth * sizeScaling, info.currentFrame.h = info.pngHeight * sizeScaling;
+
+    Character* character = new Character(info);
+    return character;
+}
 
 int main(int argc, char* argv[]) {
 
@@ -32,54 +53,41 @@ int main(int argc, char* argv[]) {
     SDL_Texture* bg1 = window.loadTexture("../graphics/background/mountains/background1.png");
     SDL_Texture* bg2 = window.loadTexture("../graphics/background/mountains/background2.png");
     SDL_Texture* bg3 = window.loadTexture("../graphics/background/mountains/background3.png");
+
+    int groundHeight = (window.getHeight() - 2 * 64 - 110);
     
-    size_t sizeScaling = 2;
-    size_t characterHeight = 64;
-    size_t characterWidth = 128;
-    size_t movementSpeed = 6;
-    size_t jumpForce = 15;
-    int groundHeight = window.getHeight() - sizeScaling * characterHeight - 110;
-    Vector2f startingPosition(200, groundHeight);
-    SDL_Rect startingFrame;
-    startingFrame.x = startingPosition.x, startingFrame.y = startingPosition.y, startingFrame.w = characterWidth * sizeScaling, startingFrame.h = characterHeight * sizeScaling;
-
-    Character knight(startingPosition, startingFrame, characterWidth, characterHeight, movementSpeed, jumpForce, groundHeight);
-
+    Character* knight = initializeCharacter(2, 128, 64, 6, 15, groundHeight, 200);
 
     // The tuple has form: (texture, startPosition, numElements, rowLength, loopFrames)
-
-    // Load and initialize knight textures.
     std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>> textures;
     textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Idle.png"), 0, 8, 2, 3));
     textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Attacks.png"), 0, 7, 8, 3));
     textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Run.png"), 0, 8, 2, 2));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Hurt.png"), 0, 8, 2, 2));
     textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/crouch_idle.png"), 0, 8, 2, 3));
     textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Jump.png"), 0, 8, 2, 3));
     textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Health.png"), 0, 8, 2, 5));
     textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Pray.png"), 2, 10, 4, 5));
     textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/attack_from_air.png"), 0, 3, 2, 3));
-    knight.initializeMovementLoops(textures);
+    knight->initializeMovementLoops(textures);
 
-    size_t slimeHeight = 128;
-    size_t slimeWidth = 128;
-    size_t slimeScaling = 1;
-    Vector2f slimePosition(500, groundHeight);
-    SDL_Rect slimeFrame;
-    slimeFrame.x = slimePosition.x, slimeFrame.y = slimePosition.y, slimeFrame.w = slimeWidth * slimeScaling, slimeFrame.h = slimeHeight * slimeScaling;
-    
-    Character slime(slimePosition, slimeFrame, slimeWidth, slimeHeight, 1, 0, groundHeight);
+
+    Character* slime = initializeCharacter(1, 128, 128, 1, 5, groundHeight, 500);
 
     // Load and initialize slime textures.
     std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>> slimeTextures;
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png"), 0, 8, 8, 8));
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Attack_3.png"), 0, 4, 4, 5));
-    slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Run.png"), 0, 7, 7, 8));
+    slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Run.png"), 0, 7, 7, 5));
+    slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Hurt.png"), 0, 6, 6, 5));
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png"), 0, 8, 8, 3));
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png"), 0, 8, 8, 3));
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png"), 0, 8, 8, 3));
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png"), 0, 8, 8, 3));
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png"), 0, 8, 8, 3));
-    slime.initializeMovementLoops(slimeTextures);
+    slime->initializeMovementLoops(slimeTextures);
+
+    enemies.push_back(slime);
 
     // Cap game at 60 FPS.
     const size_t targetFPS = 60;
@@ -108,47 +116,47 @@ int main(int argc, char* argv[]) {
                 }
 
                 case SDLK_UP:
-                    slime.startAttack();
+                    slime->startAttack();
                     break;
 
                 case SDLK_j:
-                    if (knight.isAirborne() && knight.crouch.isActive()) {
-                        knight.airAttack.start();
+                    if (knight->isAirborne() && knight->crouch.isActive()) {
+                        knight->airAttack.start();
                     } else {
-                        knight.startAttack();
+                        knight->startAttack();
                     }
                     break;
                 
                 case SDLK_k:
-                    if (!knight.heal.isActive()) knight.heal.start();
+                    if (!knight->heal.isActive()) knight->heal.start();
                     break;
 
                 case SDLK_LEFT:
-                    slime.startMovingLeft();
+                    slime->startMovingLeft();
                     break;
                 
                 case SDLK_RIGHT:
-                    slime.startMovingRight();
+                    slime->startMovingRight();
                     break;
                 
                 case SDLK_d:
-                    knight.startMovingRight();
+                    knight->startMovingRight();
                     break;
 
                 case SDLK_a:
-                    knight.startMovingLeft();
+                    knight->startMovingLeft();
                     break;
                 
                 case SDLK_w:
-                    knight.startJump();
+                    knight->startJump();
                     break;
 
                 case SDLK_m:
-                    knight.pray.start();
+                    knight->pray.start();
                     break;
 
                 case SDLK_s:
-                    knight.crouch.start();
+                    knight->crouch.start();
                     break;
                 }
                 break;
@@ -157,27 +165,27 @@ int main(int argc, char* argv[]) {
                 switch (event.key.keysym.sym) {
 
                 case SDLK_LEFT:
-                    slime.stopMovingLeft();
+                    slime->stopMovingLeft();
                     break;
                 
                 case SDLK_RIGHT:
-                    slime.stopMovingRight();
+                    slime->stopMovingRight();
                     break;
 
                 case SDLK_a:
-                    knight.stopMovingLeft();
+                    knight->stopMovingLeft();
                     break;
 
                 case SDLK_d:
-                    knight.stopMovingRight();
+                    knight->stopMovingRight();
                     break;
                 
                 case SDLK_m:
-                    knight.pray.stop();
+                    knight->pray.stop();
                     break;
 
                 case SDLK_s:
-                    knight.crouch.stop();
+                    knight->crouch.stop();
                     break;
                 }
                 break;
@@ -192,8 +200,8 @@ int main(int argc, char* argv[]) {
         renderGround(window, tileTexture);
 
         // Render characters.
-        slime.renderCharacter(window);
-        knight.renderCharacter(window);
+        knight->renderCharacter(window);
+        slime->renderCharacter(window);
 
         window.display();
 
