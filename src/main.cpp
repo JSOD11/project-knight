@@ -4,16 +4,18 @@
 #include <vector>
 
 #include "RenderWindow.hpp"
-#include "Character.hpp"
-#include "Entity.hpp"
+#include "Player.hpp"
+#include "Enemy.hpp"
+#include "Block.hpp"
 #include "Utils.hpp"
 
-std::vector<Character*> enemies;
+Player* knight;
+std::vector<Enemy*> enemies;
 
 void renderBackground(RenderWindow& window, SDL_Texture* bg1, SDL_Texture* bg2, SDL_Texture* bg3);
 void renderGround(RenderWindow& window, SDL_Texture* texture);
 
-Character* initializeCharacter(size_t sizeScaling, Vector2i pngSize, SDL_Rect hitbox, SDL_Rect attackBox, Vector2i centerCoordinates, size_t movementSpeed, size_t jumpForce, int groundHeight, size_t posX) {
+Info initializeInfo(size_t sizeScaling, Vector2i pngSize, SDL_Rect hitbox, SDL_Rect attackBox, Vector2i centerCoordinates, size_t movementSpeed, size_t jumpForce, int groundHeight, size_t posX) {
     Info info = {
         .sizeScaling = sizeScaling,
         .position = Vector2i(posX, groundHeight),
@@ -35,8 +37,7 @@ Character* initializeCharacter(size_t sizeScaling, Vector2i pngSize, SDL_Rect hi
     info.hitbox.h = hitbox.h;
     info.centerCoordinates.x = info.position.x + centerCoordinates.x, info.centerCoordinates.y = info.position.y + centerCoordinates.y;
 
-    Character* character = new Character(info);
-    return character;
+    return info;
 }
 
 int main(int argc, char* argv[]) {
@@ -63,7 +64,8 @@ int main(int argc, char* argv[]) {
 
     int groundHeight = (window.getHeight() - 2 * 64 - 110);
     
-    Character* knight = initializeCharacter(2, Vector2i(128, 64), knightHitbox, knightAttackBox, knightCenterCoordinates, 6, 15, groundHeight, 200);
+    Player* player = new Player(initializeInfo(2, Vector2i(128, 64), knightHitbox, knightAttackBox, knightCenterCoordinates, 6, 15, groundHeight, 200));
+    knight = player;
 
     // The tuple has form: (texture, startPosition, numElements, rowLength, loopFrames)
     std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>> textures;
@@ -79,7 +81,7 @@ int main(int argc, char* argv[]) {
     knight->initializeMovementLoops(textures);
 
 
-    Character* slime = initializeCharacter(1, Vector2i(128, 128), slimeHitbox, slimeAttackBox, slimeCenterCoordinates, 1, 5, groundHeight, 500);
+    Enemy* slime = new Enemy(initializeInfo(1, Vector2i(128, 128), slimeHitbox, slimeAttackBox, slimeCenterCoordinates, 1, 5, groundHeight, 500));
 
     // Load and initialize slime textures.
     std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>> slimeTextures;
@@ -87,14 +89,8 @@ int main(int argc, char* argv[]) {
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Attack_3.png"), 0, 4, 4, 5));
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Run.png"), 0, 7, 7, 5));
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Hurt.png"), 0, 6, 6, 5));
-    slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png"), 0, 8, 8, 3));
-    slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png"), 0, 8, 8, 3));
-    slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png"), 0, 8, 8, 3));
-    slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png"), 0, 8, 8, 3));
-    slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Idle.png"), 0, 8, 8, 3));
     slime->initializeMovementLoops(slimeTextures);
 
-    enemies.push_back(knight);
     enemies.push_back(slime);
 
     // Cap game at 60 FPS.
@@ -124,7 +120,7 @@ int main(int argc, char* argv[]) {
                 }
 
                 case SDLK_UP:
-                    slime->startAttack();
+                    slime->attack.start();
                     break;
 
                 case SDLK_j:
@@ -207,9 +203,9 @@ int main(int argc, char* argv[]) {
         renderBackground(window, bg1, bg2, bg3);
         renderGround(window, tileTexture);
 
-        // Render characters.
-        slime->renderCharacter(window);
-        knight->renderCharacter(window);
+        // Render Players.
+        slime->renderEnemy(window);
+        knight->renderPlayer(window);
 
         window.display();
 
@@ -240,6 +236,6 @@ void renderGround(RenderWindow& window, SDL_Texture* texture) {
 
     for (size_t i = 0; i < numTiles; i++) {
         Vector2i tilePosition(i * 32, groundHeight);
-        window.renderStatic(Entity(tilePosition, texture));
+        window.renderStatic(Block(tilePosition, texture));
     }
 }

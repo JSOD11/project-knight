@@ -1,9 +1,9 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
-#include "Entity.hpp"
+#include "Block.hpp"
 
-Entity::Entity(Vector2i position, SDL_Texture* texture) 
+Block::Block(Vector2i position, SDL_Texture* texture) 
     :position(position), texture(texture) {
     this->currentFrame.x = 0;
     this->currentFrame.y = 0;
@@ -11,10 +11,10 @@ Entity::Entity(Vector2i position, SDL_Texture* texture)
     this->currentFrame.h = 32;
 }
 
-SDL_Texture* Entity::getTexture() const {
+SDL_Texture* Block::getTexture() const {
     return this->texture;
 }
 
-SDL_Rect Entity::getCurrentFrame() const {
+SDL_Rect Block::getCurrentFrame() const {
     return this->currentFrame;
 }

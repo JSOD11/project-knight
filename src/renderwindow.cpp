@@ -3,7 +3,7 @@
 #include <iostream>
 
 #include "RenderWindow.hpp"
-#include "Entity.hpp"
+#include "Block.hpp"
 
 RenderWindow::RenderWindow(const char* title, int width, int height) 
     :window(nullptr), renderer(nullptr), width(width), height(height) {
@@ -26,20 +26,20 @@ void RenderWindow::destroyWindow() {
     SDL_DestroyWindow(this->window);
 }
 
-void RenderWindow::renderStatic(const Entity& entity) {
+void RenderWindow::renderStatic(const Block& Block) {
     SDL_Rect src;
-    src.x = entity.getCurrentFrame().x;
-    src.y = entity.getCurrentFrame().y;
-    src.w = entity.getCurrentFrame().w;
-    src.h = entity.getCurrentFrame().h;
+    src.x = Block.getCurrentFrame().x;
+    src.y = Block.getCurrentFrame().y;
+    src.w = Block.getCurrentFrame().w;
+    src.h = Block.getCurrentFrame().h;
 
     SDL_Rect dst;
-    dst.x = entity.getPosition().x * 4;
-    dst.y = entity.getPosition().y * 4;
-    dst.w = entity.getCurrentFrame().w * 4;
-    dst.h = entity.getCurrentFrame().h * 4;
+    dst.x = Block.getPosition().x * 4;
+    dst.y = Block.getPosition().y * 4;
+    dst.w = Block.getCurrentFrame().w * 4;
+    dst.h = Block.getCurrentFrame().h * 4;
     
-    SDL_RenderCopy(this->renderer, entity.getTexture(), &src, &dst);
+    SDL_RenderCopy(this->renderer, Block.getTexture(), &src, &dst);
 }
 
 SDL_Texture* RenderWindow::loadTexture(const char* filePath) {
