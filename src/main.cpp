@@ -12,7 +12,7 @@
 Player* knight;
 std::vector<Enemy*> enemies;
 
-void renderBackground(RenderWindow& window, SDL_Texture* bg1, SDL_Texture* bg2, SDL_Texture* bg3);
+void renderBackground(RenderWindow& window, std::vector<SDL_Texture*> bg);
 void renderGround(RenderWindow& window, SDL_Texture* texture);
 
 Info initializeInfo(size_t sizeScaling, Vector2i pngSize, SDL_Rect hitbox, SDL_Rect attackBox, Vector2i centerCoordinates, size_t movementSpeed, size_t jumpForce, int groundHeight, size_t posX) {
@@ -58,9 +58,12 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    SDL_Texture* bg1 = window.loadTexture("../graphics/background/mountains/background1.png");
-    SDL_Texture* bg2 = window.loadTexture("../graphics/background/mountains/background2.png");
-    SDL_Texture* bg3 = window.loadTexture("../graphics/background/mountains/background3.png");
+    std::vector<SDL_Texture*> bg;
+    bg.push_back(window.loadTexture("../graphics/background/cave/background1.png"));
+    bg.push_back(window.loadTexture("../graphics/background/cave/background2.png"));
+    bg.push_back(window.loadTexture("../graphics/background/cave/background3.png"));
+    bg.push_back(window.loadTexture("../graphics/background/cave/background4a.png"));
+    bg.push_back(window.loadTexture("../graphics/background/cave/background4b.png"));
 
     int groundHeight = (window.getHeight() - 2 * 64 - 110);
     
@@ -90,8 +93,29 @@ int main(int argc, char* argv[]) {
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Run.png"), 0, 7, 7, 5));
     slimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Blue_Slime/Hurt.png"), 0, 6, 6, 5));
     slime->initializeMovementLoops(slimeTextures);
-
     enemies.push_back(slime);
+
+    Enemy* redSlime = new Enemy(initializeInfo(1, Vector2i(128, 128), slimeHitbox, slimeAttackBox, slimeCenterCoordinates, 1, 5, groundHeight, 350));
+
+    // Load and initialize slime textures.
+    std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>> redSlimeTextures;
+    redSlimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Red_Slime/Idle.png"), 0, 8, 8, 8));
+    redSlimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Red_Slime/Attack_3.png"), 0, 4, 4, 5));
+    redSlimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Red_Slime/Run.png"), 0, 7, 7, 5));
+    redSlimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Red_Slime/Hurt.png"), 0, 6, 6, 5));
+    redSlime->initializeMovementLoops(redSlimeTextures);
+    enemies.push_back(redSlime);
+
+    Enemy* greenSlime = new Enemy(initializeInfo(1, Vector2i(128, 128), slimeHitbox, slimeAttackBox, slimeCenterCoordinates, 1, 5, groundHeight, 650));
+
+    std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>> greenSlimeTextures;
+    greenSlimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Green_Slime/Idle.png"), 0, 8, 8, 8));
+    greenSlimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Green_Slime/Attack_3.png"), 0, 4, 4, 5));
+    greenSlimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Green_Slime/Run.png"), 0, 7, 7, 5));
+    greenSlimeTextures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/slimes/Green_Slime/Hurt.png"), 0, 6, 6, 5));
+    greenSlime->initializeMovementLoops(greenSlimeTextures);
+    enemies.push_back(greenSlime);
+
 
     // Cap game at 60 FPS.
     const size_t targetFPS = 60;
@@ -200,11 +224,13 @@ int main(int argc, char* argv[]) {
         window.clearWindow();
 
         // Render environment.
-        renderBackground(window, bg1, bg2, bg3);
+        renderBackground(window, bg);
         renderGround(window, tileTexture);
 
-        // Render Players.
-        slime->renderEnemy(window);
+        // Render Characters.
+        for (Enemy*& enemy : enemies) {
+            enemy->renderEnemy(window);
+        }
         knight->renderPlayer(window);
 
         window.display();
@@ -222,10 +248,10 @@ int main(int argc, char* argv[]) {
     return 0;
 }
 
-void renderBackground(RenderWindow& window, SDL_Texture* bg1, SDL_Texture* bg2, SDL_Texture* bg3) {
-    SDL_RenderCopy(window.getRenderer(), bg1, NULL, NULL);
-    SDL_RenderCopy(window.getRenderer(), bg2, NULL, NULL);
-    SDL_RenderCopy(window.getRenderer(), bg3, NULL, NULL);
+void renderBackground(RenderWindow& window, std::vector<SDL_Texture*> bg) {
+    for (SDL_Texture*& texture : bg) {
+        SDL_RenderCopy(window.getRenderer(), texture, NULL, NULL);
+    }
 }
 
 void renderGround(RenderWindow& window, SDL_Texture* texture) {
