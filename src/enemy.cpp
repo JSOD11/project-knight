@@ -10,6 +10,7 @@ void Enemy::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t,
     if (textures.size() > 1) this->initializeTextureLoop(this->attack, this->attackMovement, textures[1], this->info.pngSize);
     if (textures.size() > 2) this->initializeTextureLoop(this->run, this->runMovement, textures[2], this->info.pngSize);
     if (textures.size() > 3) this->initializeTextureLoop(this->hurt, this->hurtMovement, textures[3], this->info.pngSize);
+    if (textures.size() > 4) this->initializeTextureLoop(this->death, this->deathMovement, textures[4], this->info.pngSize);
 }
 
 void Enemy::dealDamage() {
@@ -24,7 +25,7 @@ void Enemy::dealDamage() {
     if (collision(&attackBox, &knight->info.hitbox)) {
         if (knight->info.centerCoordinates.x < this->info.centerCoordinates.x) knight->info.facingRight = true;
         else knight->info.facingRight = false;
-        if (!knight->hurt.isActive()) knight->takeDamage();
+        if (!knight->hurt.isActive()) knight->takeDamage(this->info.attackDamage);
     }
 }
 
@@ -36,9 +37,18 @@ void Enemy::renderEnemy(RenderWindow& window) {
     // std::cout << this->info.velocityY << std::endl;
 
     SDL_RendererFlip flipType = this->info.facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
-    if (this->hurt.isActive()) {
+    if (this->death.isActive()) {
+        this->renderTexture(window, this->deathMovement, flipType);
+        if (this->deathMovement.frame == 0) {
+            this->death.stop();
+            this->died = true;
+        }
+    } else if (this->hurt.isActive()) {
         this->renderTexture(window, this->hurtMovement, flipType);
-        if (this->hurtMovement.frame == 0) this->hurt.stop();
+        if (this->hurtMovement.frame == 0) {
+            this->hurt.stop();
+            if (this->info.health <= 0) this->death.start();
+        }
     } else if (this->attack.isActive()) {
         if (this->attack.movement->frame == 3 * this->attack.movement->loopFrames) this->dealDamage();
         this->renderTexture(window, this->attackMovement, flipType);
@@ -50,6 +60,10 @@ void Enemy::renderEnemy(RenderWindow& window) {
     }
 
     this->move(window);
+}
+
+bool Enemy::isDead() {
+    return this->died;
 }
 
 void Enemy::move(RenderWindow& window) {

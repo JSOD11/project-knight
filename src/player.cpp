@@ -10,11 +10,12 @@ void Player::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t
     if (textures.size() > 1) this->initializeTextureLoop(this->attack, this->attackMovement, textures[1], this->info.pngSize);
     if (textures.size() > 2) this->initializeTextureLoop(this->run, this->runMovement, textures[2], this->info.pngSize);
     if (textures.size() > 3) this->initializeTextureLoop(this->hurt, this->hurtMovement, textures[3], this->info.pngSize);
-    if (textures.size() > 4) this->initializeTextureLoop(this->crouch, this->crouchMovement, textures[4], this->info.pngSize);
-    if (textures.size() > 5) this->initializeTextureLoop(this->jump, this->jumpMovement, textures[5], this->info.pngSize);
-    if (textures.size() > 6) this->initializeTextureLoop(this->heal, this->healMovement, textures[6], this->info.pngSize);
-    if (textures.size() > 7) this->initializeTextureLoop(this->pray, this->prayMovement, textures[7], this->info.pngSize);
-    if (textures.size() > 8) this->initializeTextureLoop(this->airAttack, this->airAttackMovement, textures[8], this->info.pngSize);
+    if (textures.size() > 4) this->initializeTextureLoop(this->death, this->deathMovement, textures[4], this->info.pngSize);
+    if (textures.size() > 5) this->initializeTextureLoop(this->crouch, this->crouchMovement, textures[5], this->info.pngSize);
+    if (textures.size() > 6) this->initializeTextureLoop(this->jump, this->jumpMovement, textures[6], this->info.pngSize);
+    if (textures.size() > 7) this->initializeTextureLoop(this->heal, this->healMovement, textures[7], this->info.pngSize);
+    if (textures.size() > 8) this->initializeTextureLoop(this->pray, this->prayMovement, textures[8], this->info.pngSize);
+    if (textures.size() > 9) this->initializeTextureLoop(this->airAttack, this->airAttackMovement, textures[9], this->info.pngSize);
 }
 
 void Player::dealDamage() {
@@ -26,11 +27,12 @@ void Player::dealDamage() {
     attackBox.w = this->info.attackBox.w;
     attackBox.h = this->info.attackBox.h;
 
-    for (Enemy*& enemy : enemies) {
+    for (auto& pair : enemies) {
+        Enemy* enemy = pair.first;
         if (collision(&attackBox, &enemy->info.hitbox)) {
             if (enemy->info.centerCoordinates.x < this->info.centerCoordinates.x) enemy->info.facingRight = true;
             else enemy->info.facingRight = false;
-            if (!enemy->hurt.isActive()) enemy->takeDamage();
+            if (!enemy->hurt.isActive()) enemy->takeDamage(this->info.attackDamage);
         }
     }
 }
@@ -42,10 +44,28 @@ void Player::renderPlayer(RenderWindow& window) {
     // std::cout << this->info.position.x << ", " << this->info.position.y << std::endl;
     // std::cout << this->info.velocityY << std::endl;
 
+    for (auto& pair : enemies) {
+        Enemy* enemy = pair.first;
+        if (collision(&knight->info.hitbox, &enemy->info.hitbox)) {
+            this->takeDamage(enemy->info.attackDamage);
+        }
+    }
+
     SDL_RendererFlip flipType = this->info.facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
-    if (this->hurt.isActive()) {
+    if (this->death.isActive()) {
+        this->renderTexture(window, this->deathMovement, flipType);
+        if (this->deathMovement.frame == 0) {
+            this->death.stop();
+
+            // For now, we're just respawning them right after they die.
+            this->info.health = 50;
+        }
+    } else if (this->hurt.isActive()) {
         this->renderTexture(window, this->hurtMovement, flipType);
-        if (this->hurtMovement.frame == 0) this->hurt.stop();
+        if (this->hurtMovement.frame == 0) {
+            this->hurt.stop();
+            if (this->info.health <= 0) this->death.start();
+        }
     } else if (this->attack.isActive()) {
         if (this->attack.movement->frame == 3 * this->attack.movement->loopFrames) this->dealDamage();
         this->renderTexture(window, this->attackMovement, flipType);
@@ -82,7 +102,7 @@ void Player::startAttack() {
     this->attack.start();
 }
 
-void Player::takeDamage() {
+void Player::takeDamage(size_t damage) {
     this->attack.stop();
     this->run.stop();
     this->crouch.stop();
@@ -91,12 +111,13 @@ void Player::takeDamage() {
     if (this->info.facingRight) this->changeCoordinates(true, -5);
     else this->changeCoordinates(true, 5);
     this->hurt.start();
+    this->info.health -= damage;
 }
 
 void Player::move(RenderWindow& window) {
     if (this->isMovingRight()) {
-        if (!this->attack.isActive()) this->info.facingRight = true;
-    } else if (this->isMovingLeft()) {
+        if (!this->attack.isActive() && !this->death.isActive()) this->info.facingRight = true;
+    } else if (this->isMovingLeft() && !this->death.isActive()) {
         this->info.movingLeft = true;
         if (!this->attack.isActive()) this->info.facingRight = false;
     }
@@ -104,22 +125,22 @@ void Player::move(RenderWindow& window) {
     float movementDelta = this->info.movementSpeed;
     if ((this->isImmobile() && !this->isAirborne()) || (this->isMovingRight() && this->isMovingLeft())) movementDelta = 0;
 
-    if (this->isMovingRight() && this->info.position.x < window.getWidth() - 150) {
+    if (this->isMovingRight() && this->info.centerCoordinates.x < window.getWidth()) {
         this->changeCoordinates(true, movementDelta);
     }
     
-    if (this->isMovingLeft() && -100 < this->info.position.x) {
+    if (this->isMovingLeft() && 0 < this->info.centerCoordinates.x) {
         this->changeCoordinates(true, -movementDelta);
     }
     this->info.currentFrame.x = this->info.position.x;
 }
 
 bool Player::isImmobile() {
-    return this->hurt.isActive() || this->attack.isActive() || this->heal.isActive() || this->crouch.isActive() || this->pray.isActive();
+    return this->death.isActive() || this->hurt.isActive() || this->attack.isActive() || this->heal.isActive() || this->crouch.isActive() || this->pray.isActive();
 }
 
 void Player::startJump() {
-    if (!this->isAirborne()) {
+    if (!this->death.isActive() && !this->isAirborne()) {
         this->heal.stop();
         this->jump.start();
         this->info.velocityY = this->info.jumpForce;

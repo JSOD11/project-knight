@@ -35,13 +35,14 @@ void Character::renderTexture(RenderWindow& window, Movement& movement, SDL_Rend
     else movement.frame++;
 }
 
-void Character::takeDamage() {
+void Character::takeDamage(size_t damage) {
     if (!this->hurt.isActive()) {
         this->attack.stop();
         this->run.stop();
         if (this->info.facingRight) this->changeCoordinates(true, -10);
         else this->changeCoordinates(true, 10);
         this->hurt.start();
+        this->info.health -= damage;
     }
 }
 
