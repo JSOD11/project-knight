@@ -29,8 +29,10 @@ void Character::initializeTextureLoop(Command& command, Movement& movement, std:
     }
 }
 
-void Character::renderTexture(RenderWindow& window, Movement& movement, SDL_RendererFlip& flipType) {
-    SDL_RenderCopyEx(window.getRenderer(), movement.texture, &movement.frameVector[movement.frame / movement.loopFrames], &this->info.currentFrame, 0, nullptr, flipType);
+void Character::renderTexture(RenderWindow& window, Movement& movement, SDL_RendererFlip& flipType, bool hitbox) {
+    SDL_Rect frame = this->info.currentFrame;
+    if (hitbox) frame = this->info.hitbox;
+    SDL_RenderCopyEx(window.getRenderer(), movement.texture, &movement.frameVector[movement.frame / movement.loopFrames], &frame, 0, nullptr, flipType);
     if (movement.frame >= movement.frameVector.size() * movement.loopFrames - 1) movement.frame = 0;
     else movement.frame++;
 }

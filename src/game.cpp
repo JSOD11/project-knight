@@ -36,7 +36,7 @@ void processInput(RenderWindow& window, SDL_Event& event, bool& engineRunning) {
                 break;
             
             case SDLK_k:
-                if (!knight->heal.isActive()) knight->heal.start();
+                if (!knight->heal.isActive() && knight->canHeal()) knight->heal.start();
                 break;
             
             case SDLK_d:
@@ -48,7 +48,7 @@ void processInput(RenderWindow& window, SDL_Event& event, bool& engineRunning) {
                 break;
             
             case SDLK_w:
-                knight->startJump();
+                if (!knight->hurt.isActive()) knight->startJump();
                 break;
 
             case SDLK_m:

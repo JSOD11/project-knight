@@ -11,16 +11,22 @@ void Enemy::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t,
     if (textures.size() > 2) this->initializeTextureLoop(this->run, this->runMovement, textures[2], this->info.pngSize);
     if (textures.size() > 3) this->initializeTextureLoop(this->hurt, this->hurtMovement, textures[3], this->info.pngSize);
     if (textures.size() > 4) this->initializeTextureLoop(this->death, this->deathMovement, textures[4], this->info.pngSize);
+    if (textures.size() > 5) this->initializeTextureLoop(this->deathEffect, this->deathEffectMovement, textures[5], Vector2i(31, 32));
 }
 
-void Enemy::dealDamage() {
+bool Enemy::dealDamage() {
     SDL_Rect attackBox = this->buildAttackBox();
 
     if (collision(&attackBox, &knight->info.hitbox)) {
         if (knight->info.centerCoordinates.x < this->info.centerCoordinates.x) knight->info.facingRight = true;
         else knight->info.facingRight = false;
-        if (!knight->hurt.isActive()) knight->takeDamage(this->info.attackDamage);
+        if (!knight->hurt.isActive()) {
+            knight->takeDamage(this->info.attackDamage);
+            return true;
+        }
     }
+
+    return false;
 }
 
 // `renderEnemy()`
@@ -34,32 +40,38 @@ void Enemy::renderEnemy(RenderWindow& window) {
             this->attack.start();
         }
     }
-
+            
     SDL_RendererFlip flipType = this->info.facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
-    if (this->death.isActive()) {
-        this->renderTexture(window, this->deathMovement, flipType);
-        if (this->deathMovement.frame == 0) {
+    if (this->deathEffect.isActive()) {
+        this->renderTexture(window, this->deathEffectMovement, flipType, true);
+        if (this->deathEffectMovement.frame == 0) {
             this->death.stop();
+            this->deathEffect.stop();
             this->died = true;
         }
+    } else if (this->death.isActive()) {
+        this->renderTexture(window, this->deathMovement, flipType, false);
+        if (this->deathMovement.frame == 0) {
+            this->deathEffect.start();
+        }
     } else if (this->hurt.isActive()) {
-        this->renderTexture(window, this->hurtMovement, flipType);
+        this->renderTexture(window, this->hurtMovement, flipType, false);
         if (this->hurtMovement.frame == 0) {
             this->hurt.stop();
             if (this->info.health <= 0) this->death.start();
         }
     } else if (this->attack.isActive()) {
         if (this->attack.movement->frame == 3 * this->attack.movement->loopFrames) this->dealDamage();
-        this->renderTexture(window, this->attackMovement, flipType);
+        this->renderTexture(window, this->attackMovement, flipType, false);
         if (this->attackMovement.frame == 0) this->attack.stop();
     } else if ((this->isMovingLeft() || this->isMovingRight()) && !(this->isMovingLeft() && this->isMovingRight())) {
-        this->renderTexture(window, this->runMovement, flipType);
+        this->renderTexture(window, this->runMovement, flipType, false);
         if (std::rand() % 400 == 0) {
             this->stopMovingRight();
             this->stopMovingLeft();
         }
     } else {
-        this->renderTexture(window, this->idleMovement, flipType);
+        this->renderTexture(window, this->idleMovement, flipType, false);
         if (std::rand() % 400 == 0) {
             if (std::rand() % 2 == 0) this->startMovingRight();
             else this->startMovingLeft();
@@ -81,12 +93,14 @@ void createSlime(RenderWindow& window, std::string color, int groundHeight, int 
     Enemy* slime = new Enemy(initializeInfo(85, 20, 1, Vector2i(128, 128), slimeHitbox, slimeAttackBox, 1, 5, groundHeight, posX));
 
     // Load and initialize slime textures.
+    // (start, N, rowLength, loopFrames)
     std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>> textures;
     textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Idle.png").c_str()), 0, 8, 8, 8));
     textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Attack_3.png").c_str()), 0, 4, 4, 5));
     textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Run.png").c_str()), 0, 7, 7, 5));
     textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Hurt.png").c_str()), 0, 6, 6, 5));
     textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Dead.png").c_str()), 0, 3, 3, 7));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/death_effect.png"), 0, 8, 8, 4));
     slime->initializeMovementLoops(textures);
     enemies[slime] = true;
 }

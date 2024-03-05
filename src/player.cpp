@@ -37,30 +37,51 @@ void Player::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t
     if (textures.size() > 9) this->initializeTextureLoop(this->airAttack, this->airAttackMovement, textures[9], this->info.pngSize);
 }
 
-void Player::renderHealthBar(RenderWindow& window, SDL_Texture*& healthBarBackground, SDL_Texture*& bar, SDL_Texture*& healthBar) {
-
-    (void) bar;
+void Player::renderHUD(RenderWindow& window, std::vector<SDL_Texture*>& hudTextures) {
 
     SDL_Rect healthBarBox;
     size_t maxWidth = 200;
 
-    healthBarBox.x = 40, healthBarBox.y = window.getHeight() - 40, healthBarBox.w = maxWidth, healthBarBox.h = 10;
-    SDL_RenderCopy(window.getRenderer(), healthBarBackground, nullptr, &healthBarBox);
+    healthBarBox.x = 100, healthBarBox.y = window.getHeight() - 60, healthBarBox.w = maxWidth, healthBarBox.h = 15;
+    SDL_RenderCopy(window.getRenderer(), hudTextures[10], nullptr, &healthBarBox);
     // SDL_RenderCopy(window.getRenderer(), bar, nullptr, &healthBarBox);
-    healthBarBox.x = 40, healthBarBox.y = window.getHeight() - 40, healthBarBox.w = maxWidth * this->info.health / this->info.maxHealth, healthBarBox.h = 10;
-    SDL_RenderCopy(window.getRenderer(), healthBar, nullptr, &healthBarBox);
+    healthBarBox.w = maxWidth * this->info.health / this->info.maxHealth;
+    SDL_RenderCopy(window.getRenderer(), hudTextures[12], nullptr, &healthBarBox);
+
+    SDL_Rect iconBox;
+    iconBox.x = 50, iconBox.y = window.getHeight() - 80, iconBox.w = 50, iconBox.h = 50;
+    SDL_RenderCopy(window.getRenderer(), hudTextures[13], nullptr, &iconBox);
+
+    SDL_Rect gemRect;
+    gemRect.x = 57, gemRect.y = window.getHeight() - 72, gemRect.w = 38, gemRect.h = 38;
+    SDL_RenderCopy(window.getRenderer(), hudTextures[14], nullptr, &gemRect);
+
+    SDL_Texture* number = hudTextures[this->healGems];
+    SDL_Rect numberRect;
+    numberRect.x = 80, numberRect.y = window.getHeight() - 55, numberRect.w = 20, numberRect.h = 20;
+    SDL_RenderCopy(window.getRenderer(), number, nullptr, &numberRect);
 }
 
-void Player::dealDamage() {
-    SDL_Rect attackBox = this->buildAttackBox();
+bool Player::dealDamage(RenderWindow& window, bool airAttack) {
+
+    (void) window;
+
+    SDL_Rect attackBox;
+    if (airAttack) {
+        attackBox = this->info.hitbox;
+        attackBox.y += 10;
+    } else attackBox = this->buildAttackBox();
     for (auto& pair : enemies) {
         Enemy* enemy = pair.first;
         if (collision(&attackBox, &enemy->info.hitbox)) {
             if (enemy->info.centerCoordinates.x < this->info.centerCoordinates.x) enemy->info.facingRight = true;
             else enemy->info.facingRight = false;
             enemy->takeDamage(this->info.attackDamage);
+            return true;
         }
     }
+
+    return false;
 }
 
 // `renderPlayer()`
@@ -77,28 +98,39 @@ void Player::renderPlayer(RenderWindow& window) {
         }
     }
 
+    if (this->invincibilityFrame >= 0) {
+        if (this->invincibilityFrame == 60) this->invincibilityFrame = -1;
+        else this->invincibilityFrame++;
+    }
+
     SDL_RendererFlip flipType = this->info.facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
     if (this->death.isActive()) {
-        this->renderTexture(window, this->deathMovement, flipType);
+        this->renderTexture(window, this->deathMovement, flipType, false);
         if (this->deathMovement.frame == 0) {
             this->death.stop();
 
             // For now, we're just respawning right after death.
             this->info.health = 100;
+            this->healGems = 9;
+            this->invincibilityFrame = 0;
         }
     } else if (this->hurt.isActive()) {
-        this->renderTexture(window, this->hurtMovement, flipType);
+        this->renderTexture(window, this->hurtMovement, flipType, false);
         if (this->hurtMovement.frame == 0) {
             this->hurt.stop();
             if (this->info.health <= 0) this->death.start();
         }
     } else if (this->attack.isActive()) {
-        if (this->attack.movement->frame == 3 * this->attack.movement->loopFrames) this->dealDamage();
-        this->renderTexture(window, this->attackMovement, flipType);
+        if (this->attack.movement->frame == 3 * this->attack.movement->loopFrames) this->dealDamage(window, false);
+        this->renderTexture(window, this->attackMovement, flipType, false);
         if (this->attackMovement.frame == 0) this->attack.stop();
     } else if (this->isAirborne()) {
         if (this->airAttack.isActive()) {
-            this->renderTexture(window, this->airAttackMovement, flipType);
+            if (this->dealDamage(window, true)) {
+                this->jump.stop();
+                this->startJump();
+            }
+            this->renderTexture(window, this->airAttackMovement, flipType, false);
             if (this->airAttackMovement.frame == 0) this->airAttack.stop();
         } else {
             int frame = -this->info.velocityY / 4 + 4;
@@ -107,17 +139,20 @@ void Player::renderPlayer(RenderWindow& window) {
             SDL_RenderCopyEx(window.getRenderer(), this->jumpMovement.texture, &this->jumpMovement.frameVector[frame], &this->info.currentFrame, 0, nullptr, flipType);
         }
     } else if (this->heal.isActive()) {
-        if (this->heal.movement->frame == 3 * this->heal.movement->loopFrames) this->info.health = std::min(100, this->info.health + 30);
-        this->renderTexture(window, this->healMovement, flipType);
+        if (this->heal.movement->frame == 3 * this->heal.movement->loopFrames) {
+            this->info.health = std::min(100, this->info.health + 30);
+            this->healGems--;
+        }
+        this->renderTexture(window, this->healMovement, flipType, false);
         if (this->healMovement.frame == 0) this->healMovement.isActive = false;
     } else if ((this->pray.isActive())) {
-        this->renderTexture(window, this->prayMovement, flipType);
+        this->renderTexture(window, this->prayMovement, flipType, false);
     } else if (this->crouch.isActive()) {
-        this->renderTexture(window, this->crouchMovement, flipType);
+        this->renderTexture(window, this->crouchMovement, flipType, false);
     } else if ((this->isMovingLeft() || this->isMovingRight()) && !(this->isMovingLeft() && this->isMovingRight())) {
-        this->renderTexture(window, this->runMovement, flipType);
+        this->renderTexture(window, this->runMovement, flipType, false);
     } else {
-        this->renderTexture(window, this->idleMovement, flipType);
+        this->renderTexture(window, this->idleMovement, flipType, false);
     }
 
     this->move(window);
@@ -134,7 +169,7 @@ void Player::startAttack() {
 }
 
 void Player::takeDamage(size_t damage) {
-    if (!this->hurt.isActive()) {
+    if (!this->hurt.isActive() && this->invincibilityFrame < 0) {
         this->attack.stop();
         this->run.stop();
         this->crouch.stop();
@@ -143,6 +178,7 @@ void Player::takeDamage(size_t damage) {
         if (this->info.facingRight) this->changeCoordinates(true, -10);
         else this->changeCoordinates(true, 10);
         this->hurt.start();
+        this->invincibilityFrame = 0;
         this->info.health -= damage;
     }
 }
@@ -179,4 +215,8 @@ void Player::obeyGravity() {
         this->info.velocityY += GRAVITY;
         if (this->info.velocityY < -10) this->info.velocityY = -10;
     }
+}
+
+bool Player::canHeal() {
+    return this->healGems > 0;
 }

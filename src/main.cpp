@@ -41,9 +41,15 @@ int main(int argc, char* argv[]) {
     bg.push_back(window.loadTexture("../graphics/background/cave/background4a.png"));
     bg.push_back(window.loadTexture("../graphics/background/cave/background4b.png"));
 
-    SDL_Texture* healthBarBackground = window.loadTexture("../graphics/player/knight/HUD/bar_background.png");
-    SDL_Texture* bar = window.loadTexture("../graphics/player/knight/HUD/bar.png");
-    SDL_Texture* healthBar = window.loadTexture("../graphics/player/knight/HUD/health_bar.png");
+    std::vector<SDL_Texture*> hudTextures;
+    for (size_t i = 0; i < 10; i++) {
+        hudTextures.push_back(window.loadTexture(("../graphics/numbers/" + std::to_string(i) + ".png").c_str()));
+    }
+    hudTextures.push_back(window.loadTexture("../graphics/player/knight/HUD/bar_background.png"));
+    hudTextures.push_back(window.loadTexture("../graphics/player/knight/HUD/bar.png"));
+    hudTextures.push_back(window.loadTexture("../graphics/player/knight/HUD/health_bar.png"));
+    hudTextures.push_back(window.loadTexture("../graphics/player/knight/HUD/HUDbox.png"));
+    hudTextures.push_back(window.loadTexture("../graphics/player/knight/HUD/gems/gem.png"));
 
     int groundHeight = (window.getHeight() - 2 * 64 - 110);
 
@@ -92,7 +98,7 @@ int main(int argc, char* argv[]) {
         
         knight->renderPlayer(window);
 
-        knight->renderHealthBar(window, healthBarBackground, bar, healthBar);
+        knight->renderHUD(window, hudTextures);
 
         window.display();
 
