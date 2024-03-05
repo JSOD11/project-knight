@@ -14,13 +14,7 @@ void Enemy::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t,
 }
 
 void Enemy::dealDamage() {
-    SDL_Rect attackBox = this->info.currentFrame;
-    if (this->info.facingRight) attackBox.x += this->info.attackBox.x - this->info.attackBox.w;
-    else attackBox.x += this->info.sizeScaling * this->info.pngSize.x - this->info.attackBox.x;
-    attackBox.y += this->info.attackBox.y;
-
-    attackBox.w = this->info.attackBox.w;
-    attackBox.h = this->info.attackBox.h;
+    SDL_Rect attackBox = this->buildAttackBox();
 
     if (collision(&attackBox, &knight->info.hitbox)) {
         if (knight->info.centerCoordinates.x < this->info.centerCoordinates.x) knight->info.facingRight = true;
@@ -35,6 +29,11 @@ void Enemy::renderEnemy(RenderWindow& window) {
 
     // std::cout << this->info.position.x << ", " << this->info.position.y << std::endl;
     // std::cout << this->info.velocityY << std::endl;
+    if (collision(&this->info.currentFrame, &knight->info.hitbox)) {
+        if (std::rand() % 120 == 0) {
+            this->attack.start();
+        }
+    }
 
     SDL_RendererFlip flipType = this->info.facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
     if (this->death.isActive()) {
@@ -55,38 +54,39 @@ void Enemy::renderEnemy(RenderWindow& window) {
         if (this->attackMovement.frame == 0) this->attack.stop();
     } else if ((this->isMovingLeft() || this->isMovingRight()) && !(this->isMovingLeft() && this->isMovingRight())) {
         this->renderTexture(window, this->runMovement, flipType);
+        if (std::rand() % 400 == 0) {
+            this->stopMovingRight();
+            this->stopMovingLeft();
+        }
     } else {
         this->renderTexture(window, this->idleMovement, flipType);
+        if (std::rand() % 400 == 0) {
+            if (std::rand() % 2 == 0) this->startMovingRight();
+            else this->startMovingLeft();
+        }
     }
 
     this->move(window);
+
+    // renderBox(window, this->info.hitbox);
+    // SDL_Rect attackBox = this->buildAttackBox();
+    // renderBox(window, attackBox);
 }
 
 bool Enemy::isDead() {
     return this->died;
 }
 
-void Enemy::move(RenderWindow& window) {
-    if (this->isMovingRight()) {
-        if (!this->attack.isActive()) this->info.facingRight = true;
-    } else if (this->isMovingLeft()) {
-        this->info.movingLeft = true;
-        if (!this->attack.isActive()) this->info.facingRight = false;
-    }
+void createSlime(RenderWindow& window, std::string color, int groundHeight, int posX) {
+    Enemy* slime = new Enemy(initializeInfo(85, 20, 1, Vector2i(128, 128), slimeHitbox, slimeAttackBox, 1, 5, groundHeight, posX));
 
-    float movementDelta = this->info.movementSpeed;
-    if (this->isImmobile() || (this->isMovingRight() && this->isMovingLeft())) movementDelta = 0;
-
-    if (this->isMovingRight() && this->info.position.x < window.getWidth() - 150) {
-        this->changeCoordinates(true, movementDelta);
-    }
-    
-    if (this->isMovingLeft() && -100 < this->info.position.x) {
-        this->changeCoordinates(true, -movementDelta);
-    }
-    this->info.currentFrame.x = this->info.position.x;
-}
-
-bool Enemy::isImmobile() {
-    return this->hurt.isActive() || this->attack.isActive();
+    // Load and initialize slime textures.
+    std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>> textures;
+    textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Idle.png").c_str()), 0, 8, 8, 8));
+    textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Attack_3.png").c_str()), 0, 4, 4, 5));
+    textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Run.png").c_str()), 0, 7, 7, 5));
+    textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Hurt.png").c_str()), 0, 6, 6, 5));
+    textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Dead.png").c_str()), 0, 3, 3, 7));
+    slime->initializeMovementLoops(textures);
+    enemies[slime] = true;
 }

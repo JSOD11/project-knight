@@ -8,7 +8,8 @@ INCLUDES := -I/opt/homebrew/opt/sdl2/include/SDL2 -I/opt/homebrew/opt/sdl2_image
 LIBS := -lSDL2 -lSDL2_image
 
 # Source files and Object files
-SOURCES := $(wildcard *.cpp) $(wildcard ../some_other_directory/*.cpp)
+SOURCES := $(wildcard *.cpp)
+HEADERS := $(wildcard ../include/*.hpp)
 OBJECTS := $(SOURCES:.cpp=.o)
 
 # Executable name

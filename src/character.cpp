@@ -36,21 +36,59 @@ void Character::renderTexture(RenderWindow& window, Movement& movement, SDL_Rend
 }
 
 void Character::takeDamage(size_t damage) {
-    if (!this->hurt.isActive()) {
-        this->attack.stop();
-        this->run.stop();
-        if (this->info.facingRight) this->changeCoordinates(true, -10);
-        else this->changeCoordinates(true, 10);
-        this->hurt.start();
-        this->info.health -= damage;
+    this->attack.stop();
+    this->run.stop();
+    // if (this->info.facingRight) this->changeCoordinates(true, -10);
+    // else this->changeCoordinates(true, 10);
+    this->hurt.start();
+    this->info.health -= damage;
+}
+
+bool Character::canMove() {
+    return !this->isImmobile();
+}
+
+bool Character::canChangeDirection() {
+    return !this->attack.isActive() && !this->death.isActive();
+}
+
+bool Character::isImmobile() {
+    return this->hurt.isActive() || this->attack.isActive() || this->death.isActive() || (this->isMovingRight() && this->isMovingLeft());
+}
+
+void Character::move(RenderWindow& window) {
+    if (this->canChangeDirection()) {
+        if (this->isMovingRight()) {
+            this->info.facingRight = true;
+        } else if (this->isMovingLeft()) {
+            this->info.movingLeft = true;
+            this->info.facingRight = false;
+        }
+    }
+
+    float movementDelta = this->info.movementSpeed;
+    if (!this->canMove()) movementDelta = 0;
+
+    if (this->isMovingRight() && this->info.hitbox.x + this->info.hitbox.w < window.getWidth()) {
+        this->changeCoordinates(true, movementDelta);
+    }
+    
+    if (this->isMovingLeft() && 0 < this->info.hitbox.x) {
+        this->changeCoordinates(true, -movementDelta);
     }
 }
 
 void Character::startMovingRight() {
+    // When the character is facing right, just add the hitbox x coord.
+    this->info.hitbox.x = info.currentFrame.x + info.hitboxX;
     this->info.movingRight = true;
 }
 
 void Character::startMovingLeft() {
+    // Since the character may not be symmetrical, we need to redefine the hitbox x coordinate when the
+    // character turns to the left. To do this, start from the upper right corner of the current frame, then
+    // subtract hitboxX and also the hitbox width (since the box starts at the character's upper right corner).
+    this->info.hitbox.x = info.currentFrame.x + info.sizeScaling * info.pngSize.x - info.hitboxX - info.hitbox.w;
     this->info.movingLeft = true;
 }
 
@@ -98,4 +136,50 @@ void Character::stopMovingRight() {
 
 void Character::stopMovingLeft() {
     this->info.movingLeft = false;
+}
+
+SDL_Rect Character::buildAttackBox() {
+    SDL_Rect attackBox = this->info.currentFrame;
+    if (this->info.facingRight) attackBox.x += this->info.attackBox.x - this->info.attackBox.w;
+    else attackBox.x += this->info.sizeScaling * this->info.pngSize.x - this->info.attackBox.x;
+    attackBox.y += this->info.attackBox.y;
+
+    attackBox.w = this->info.attackBox.w;
+    attackBox.h = this->info.attackBox.h;
+    return attackBox;
+}
+
+void Character::renderBox(RenderWindow& window, SDL_Rect& box) {
+    SDL_SetRenderDrawColor(window.getRenderer(), 255, 0, 0, 255);
+    SDL_RenderDrawRect(window.getRenderer(), &box);
+    SDL_RenderDrawPoint(window.getRenderer(), box.x + box.w / 2, box.y + box.h / 2);
+}
+
+Info initializeInfo(int health, size_t attackDamage, size_t sizeScaling, Vector2i pngSize, SDL_Rect hitbox, SDL_Rect attackBox, size_t movementSpeed, size_t jumpForce, int groundHeight, size_t posX) {
+    Info info = {
+        .health = health,
+        .maxHealth = health,
+        .attackDamage = attackDamage,
+        .sizeScaling = sizeScaling,
+        .position = Vector2i(posX, groundHeight),
+        .pngSize = pngSize,
+        .hitboxX = hitbox.x,
+        .attackBox = attackBox,
+        .movementSpeed = movementSpeed,
+        .jumpForce = jumpForce,
+        .groundHeight = groundHeight,
+
+        .facingRight = true,
+        .movingRight = false,
+        .movingLeft = false,
+        .velocityY = 0
+    };
+    info.currentFrame.x = info.position.x, info.currentFrame.y = info.position.y, info.currentFrame.w = info.pngSize.x * sizeScaling, info.currentFrame.h = info.pngSize.y * sizeScaling;
+    info.hitbox.x = info.currentFrame.x + hitbox.x;
+    info.hitbox.y = info.currentFrame.y + hitbox.y;
+    info.hitbox.w = hitbox.w;
+    info.hitbox.h = hitbox.h;
+    info.centerCoordinates.x = info.hitbox.x + info.hitbox.w / 2, info.centerCoordinates.y = info.hitbox.y + info.hitbox.h / 2;
+
+    return info;
 }
