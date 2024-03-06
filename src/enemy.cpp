@@ -5,7 +5,7 @@
 #include "Game.hpp"
 #include "Player.hpp"
 
-void Enemy::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>>& textures) {
+void Enemy::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t, size_t>>& textures) {
     this->initializeTextureLoop(this->idle, this->idleMovement, textures[0], this->info.pngSize);
     if (textures.size() > 1) this->initializeTextureLoop(this->attack, this->attackMovement, textures[1], this->info.pngSize);
     if (textures.size() > 2) this->initializeTextureLoop(this->run, this->runMovement, textures[2], this->info.pngSize);
@@ -85,7 +85,7 @@ void Enemy::renderEnemy(RenderWindow& window) {
             this->hurt.stop();
         }
     } else if (this->attack.isActive()) {
-        if (this->attack.movement->frame == 3 * this->attack.movement->loopFrames) this->dealDamage();
+        if (this->attack.movement->frame == this->attack.movement->executionFrame * this->attack.movement->loopFrames) this->dealDamage();
         this->renderTexture(window, this->attackMovement, flipType, false);
         if (this->attackMovement.frame == 0) this->attack.stop();
     } else if ((this->isMovingLeft() || this->isMovingRight()) && !(this->isMovingLeft() && this->isMovingRight())) {

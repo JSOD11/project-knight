@@ -4,7 +4,7 @@
 #include "Character.hpp"
 #include "Game.hpp"
 
-void Character::initializeTextureLoop(Command& command, Movement& movement, std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>& texture, Vector2i pngSize) {
+void Character::initializeTextureLoop(Command& command, Movement& movement, std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t, size_t>& texture, Vector2i pngSize) {
 
     movement.texture = std::get<0>(texture);
     if (!movement.texture) std::cout << "Failed to load texture.\n";
@@ -13,6 +13,7 @@ void Character::initializeTextureLoop(Command& command, Movement& movement, std:
     size_t N = std::get<2>(texture);
     size_t rowLength = std::get<3>(texture);
     movement.frame = 0;
+    movement.executionFrame = std::get<5>(texture);
     movement.disabled = false;
     movement.loopFrames = std::get<4>(texture);
     movement.isActive = false;

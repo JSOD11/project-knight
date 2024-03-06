@@ -9,24 +9,24 @@
 void createPlayer(RenderWindow& window, int groundHeight, int posX) {
     knight = new Player(1, initializeInfo(100, 30, 2, Vector2i(128, 64), knightHitbox, knightAttackBox, 6, 15, groundHeight, posX));
 
-    // The tuple has form: (texture, startPosition, numElements, rowLength, loopFrames)
-    std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>> textures;
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Idle.png"), 0, 8, 2, 3));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Attacks.png"), 0, 7, 8, 3));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Run.png"), 0, 8, 2, 2));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Hurt.png"), 0, 3, 2, 10));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Death.png"), 0, 4, 2, 100));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/crouch_idle.png"), 0, 8, 2, 3));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Jump.png"), 0, 8, 2, 3));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Health.png"), 0, 8, 2, 5));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Pray.png"), 2, 10, 4, 5));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/attack_from_air.png"), 0, 3, 2, 3));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/roll.png"), 0, 4, 2, 4));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Attacks.png"), 7, 3, 8, 3));
+    // The tuple has form: (texture, startPosition, numElements, rowLength, loopFrames, executionFrame)
+    std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t, size_t>> textures;
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Idle.png"), 0, 8, 2, 3, 0));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Attacks.png"), 0, 7, 8, 3, 3));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Run.png"), 0, 8, 2, 2, 0));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Hurt.png"), 0, 3, 2, 10, 0));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Death.png"), 0, 4, 2, 100, 0));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/crouch_idle.png"), 0, 8, 2, 3, 0));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Jump.png"), 0, 8, 2, 3, 0));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Health.png"), 0, 8, 2, 5, 0));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Pray.png"), 2, 10, 4, 5, 0));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/attack_from_air.png"), 0, 3, 2, 3, 0));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/roll.png"), 0, 4, 2, 4, 0));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Attacks.png"), 7, 3, 8, 3, 0));
     knight->initializeMovementLoops(textures);
 }
 
-void Player::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>>& textures) {
+void Player::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t, size_t>>& textures) {
     this->initializeTextureLoop(this->idle, this->idleMovement, textures[0], this->info.pngSize);
     if (textures.size() > 1) this->initializeTextureLoop(this->attack, this->attackMovement, textures[1], this->info.pngSize);
     if (textures.size() > 2) this->initializeTextureLoop(this->run, this->runMovement, textures[2], this->info.pngSize);
