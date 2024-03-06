@@ -34,6 +34,8 @@ def find_sprite_hitbox(image_path, name, block, blockWidth, blockHeight, sizeSca
         print()
 
 # Remember: If the Player has a size scaling of 2, multiply these offsets by 2.
-find_sprite_hitbox("../graphics/player/knight/Idle.png", "Knight idle", 0, 128, 64, 2)
-find_sprite_hitbox("../graphics/player/knight/Attacks.png", "Knight attack", 3, 128, 64, 2)
-find_sprite_hitbox("../graphics/enemies/slimes/Blue_Slime/Idle.png", "Slime idle", 0, 128, 128, 1)
+# find_sprite_hitbox("../graphics/player/knight/Idle.png", "Knight idle", 0, 128, 64, 2)
+# find_sprite_hitbox("../graphics/player/knight/Attacks.png", "Knight attack", 3, 128, 64, 2)
+# find_sprite_hitbox("../graphics/enemies/slimes/Blue_Slime/Idle.png", "Slime idle", 0, 128, 128, 1)
+find_sprite_hitbox("../graphics/enemies/skeleton/Skeleton_Warrior/Idle.png", "Skeleton idle", 0, 128, 128, 1.5)
+find_sprite_hitbox("../graphics/enemies/skeleton/Skeleton_Warrior/Attack_3.png", "Skeleton attack 3", 2, 128, 128, 1.5)

@@ -12,6 +12,11 @@ void Enemy::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t,
     if (textures.size() > 3) this->initializeTextureLoop(this->hurt, this->hurtMovement, textures[3], this->info.pngSize);
     if (textures.size() > 4) this->initializeTextureLoop(this->death, this->deathMovement, textures[4], this->info.pngSize);
     if (textures.size() > 5) this->initializeTextureLoop(this->deathEffect, this->deathEffectMovement, textures[5], Vector2i(31, 32));
+    if (textures.size() > 6) this->initializeTextureLoop(this->birthEffect, this->birthEffectMovement, textures[6], Vector2i(32, 32));
+}
+
+void Enemy::setSightDistance(int sightDistance) {
+    this->sightDistance = sightDistance;
 }
 
 bool Enemy::dealDamage() {
@@ -35,14 +40,32 @@ void Enemy::renderEnemy(RenderWindow& window) {
 
     // std::cout << this->info.position.x << ", " << this->info.position.y << std::endl;
     // std::cout << this->info.velocityY << std::endl;
-    if (collision(&this->info.currentFrame, &knight->info.hitbox)) {
-        if (std::rand() % 120 == 0) {
-            this->attack.start();
+
+    if (!this->birthEffect.isActive() && !this->deathEffect.isActive()) {
+        if (std::abs(knight->info.centerCoordinates.x - this->info.centerCoordinates.x) <= this->sightDistance) {
+            this->stopMovingRight();
+            this->stopMovingLeft();
+            if (knight->info.centerCoordinates.x < this->info.centerCoordinates.x) this->startMovingLeft();
+            else this->startMovingRight();
+        }
+
+        if (std::abs(knight->info.centerCoordinates.x - this->info.centerCoordinates.x) <= 30) {
+            this->stopMovingRight();
+            this->stopMovingLeft();
+        }
+
+        if (collision(&this->info.currentFrame, &knight->info.hitbox)) {
+            if (std::rand() % 120 == 0) {
+                this->attack.start();
+            }
         }
     }
             
     SDL_RendererFlip flipType = this->info.facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
-    if (this->deathEffect.isActive()) {
+    if (this->birthEffect.isActive()) {
+        this->renderTexture(window, this->birthEffectMovement, flipType, true);
+        if (this->birthEffectMovement.frame == 0) this->birthEffect.stop();
+    } else if (this->deathEffect.isActive()) {
         this->renderTexture(window, this->deathEffectMovement, flipType, true);
         if (this->deathEffectMovement.frame == 0) {
             this->death.stop();
@@ -78,7 +101,7 @@ void Enemy::renderEnemy(RenderWindow& window) {
         }
     }
 
-    this->move(window);
+    this->move(window, this->info.movementSpeed);
 
     // renderBox(window, this->info.hitbox);
     // SDL_Rect attackBox = this->buildAttackBox();
@@ -89,18 +112,6 @@ bool Enemy::isDead() {
     return this->died;
 }
 
-void createSlime(RenderWindow& window, std::string color, int groundHeight, int posX) {
-    Enemy* slime = new Enemy(initializeInfo(85, 20, 1, Vector2i(128, 128), slimeHitbox, slimeAttackBox, 1, 5, groundHeight, posX));
-
-    // Load and initialize slime textures.
-    // (start, N, rowLength, loopFrames)
-    std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>> textures;
-    textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Idle.png").c_str()), 0, 8, 8, 8));
-    textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Attack_3.png").c_str()), 0, 4, 4, 5));
-    textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Run.png").c_str()), 0, 7, 7, 5));
-    textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Hurt.png").c_str()), 0, 6, 6, 5));
-    textures.push_back(std::make_tuple(window.loadTexture(("../graphics/enemies/slimes/" + color + "_Slime/Dead.png").c_str()), 0, 3, 3, 7));
-    textures.push_back(std::make_tuple(window.loadTexture("../graphics/enemies/death_effect.png"), 0, 8, 8, 4));
-    slime->initializeMovementLoops(textures);
-    enemies[slime] = true;
+bool Enemy::dealsBodyDamage() {
+    return this->bodyDamage;
 }

@@ -13,13 +13,14 @@ void Character::initializeTextureLoop(Command& command, Movement& movement, std:
     size_t N = std::get<2>(texture);
     size_t rowLength = std::get<3>(texture);
     movement.frame = 0;
+    movement.disabled = false;
     movement.loopFrames = std::get<4>(texture);
     movement.isActive = false;
 
     command.movement = &movement;
 
     // N is the number of images in the loop. rowLength is the length of a row in the png.
-    for (size_t i = start; i < N; i++) {
+    for (size_t i = start; i < start + N; i++) {
         SDL_Rect frame;
         frame.x = (i % rowLength) * pngSize.x;
         frame.y = (i / rowLength) * pngSize.y;
@@ -58,7 +59,7 @@ bool Character::isImmobile() {
     return this->hurt.isActive() || this->attack.isActive() || this->death.isActive() || (this->isMovingRight() && this->isMovingLeft());
 }
 
-void Character::move(RenderWindow& window) {
+void Character::move(RenderWindow& window, float movementSpeed) {
     if (this->canChangeDirection()) {
         if (this->isMovingRight()) {
             this->info.facingRight = true;
@@ -68,7 +69,7 @@ void Character::move(RenderWindow& window) {
         }
     }
 
-    float movementDelta = this->info.movementSpeed;
+    float movementDelta = movementSpeed;
     if (!this->canMove()) movementDelta = 0;
 
     if (this->isMovingRight() && this->info.hitbox.x + this->info.hitbox.w < window.getWidth()) {
@@ -157,7 +158,7 @@ void Character::renderBox(RenderWindow& window, SDL_Rect& box) {
     SDL_RenderDrawPoint(window.getRenderer(), box.x + box.w / 2, box.y + box.h / 2);
 }
 
-Info initializeInfo(int health, size_t attackDamage, size_t sizeScaling, Vector2i pngSize, SDL_Rect hitbox, SDL_Rect attackBox, size_t movementSpeed, size_t jumpForce, int groundHeight, size_t posX) {
+Info initializeInfo(int health, size_t attackDamage, float sizeScaling, Vector2i pngSize, SDL_Rect hitbox, SDL_Rect attackBox, size_t movementSpeed, size_t jumpForce, int groundHeight, size_t posX) {
     Info info = {
         .health = health,
         .maxHealth = health,

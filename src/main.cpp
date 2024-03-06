@@ -7,6 +7,8 @@
 #include "RenderWindow.hpp"
 #include "Player.hpp"
 #include "Enemy.hpp"
+#include "Slime.hpp"
+#include "Skeleton.hpp"
 #include "Block.hpp"
 #include "Utils.hpp"
 
@@ -26,7 +28,7 @@ int main(int argc, char* argv[]) {
         return 1;
     }
 
-    RenderWindow window("Pearl Knight (Beta 0.0)", 1280, 720);
+    RenderWindow window("Project Knight (Beta 0.0)", 1280, 720);
     
     SDL_Texture* tileTexture = window.loadTexture("../graphics/world/medieval/Tiles/floor_tile_3.png");
     if (!tileTexture) {
@@ -50,6 +52,8 @@ int main(int argc, char* argv[]) {
     hudTextures.push_back(window.loadTexture("../graphics/player/knight/HUD/health_bar.png"));
     hudTextures.push_back(window.loadTexture("../graphics/player/knight/HUD/HUDbox.png"));
     hudTextures.push_back(window.loadTexture("../graphics/player/knight/HUD/gems/gem.png"));
+    hudTextures.push_back(window.loadTexture("../graphics/background/vignette_big.png"));
+    hudTextures.push_back(window.loadTexture("../graphics/player/knight/HUD/corrupt_bar.png"));
 
     int groundHeight = (window.getHeight() - 2 * 64 - 110);
 
@@ -57,10 +61,12 @@ int main(int argc, char* argv[]) {
     Player* player = knight;
     (void) player;
 
-    createSlime(window, "Blue", groundHeight, 500);
-    createSlime(window, "Blue", groundHeight, 700);
-    createSlime(window, "Red", groundHeight, 350);
-    createSlime(window, "Green", groundHeight, 800);
+    // createSlime(window, "Blue", groundHeight, 500);
+    // createSlime(window, "Blue", groundHeight, 700);
+    // createSlime(window, "Red", groundHeight, 350);
+    // createSlime(window, "Green", groundHeight, 800);
+
+    createSkeleton(window, groundHeight, 500);
 
     // Cap game at 60 FPS.
     const size_t targetFPS = 60;
@@ -102,11 +108,16 @@ int main(int argc, char* argv[]) {
 
         window.display();
 
-        if (std::rand() % 300 == 0) {
+        if (std::rand() % 600 == 0) {
             std::vector<std::string> colors = { "Blue", "Red", "Green" };
             size_t index = std::rand() % 3;
             int position = std::rand() % window.getWidth();
             if (std::abs(position - knight->info.currentFrame.x) >= 50) createSlime(window, colors[index], groundHeight, position);
+        }
+
+        if (std::rand() % 400 == 0) {
+            int position = std::rand() % window.getWidth();
+            createSkeleton(window, groundHeight, position);
         }
 
         frameTime = SDL_GetTicks() - frameStart;

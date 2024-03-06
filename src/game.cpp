@@ -20,31 +20,39 @@ void processInput(RenderWindow& window, SDL_Event& event, bool& engineRunning) {
             }
 
             case SDLK_UP:
-                Enemy* slime;
+                Enemy* enemy;
                 for (auto& pair : enemies) {
-                    slime = pair.first;
+                    enemy = pair.first;
                 }
-                if (slime) slime->attack.start();
+                if (enemy) enemy->attack.start();
                 break;
 
             case SDLK_j:
                 if (knight->isAirborne() && knight->crouch.isActive()) {
                     knight->airAttack.start();
+                } else if (knight->attack.isActive()) {
+                    knight->startAttack(2);
                 } else {
-                    knight->startAttack();
+                    knight->startAttack(1);
                 }
                 break;
-            
+
             case SDLK_k:
+                if (!knight->hurt.isActive() && !knight->roll.isDisabled() && \
+                    (knight->isMovingRight() || knight->isMovingLeft()) && \
+                    !(knight->isMovingRight() && knight->isMovingLeft())) knight->startRoll();
+                break;
+            
+            case SDLK_l:
                 if (!knight->heal.isActive() && knight->canHeal()) knight->heal.start();
                 break;
             
             case SDLK_d:
-                knight->startMovingRight();
+                if (!knight->roll.isActive()) knight->startMovingRight();
                 break;
 
             case SDLK_a:
-                knight->startMovingLeft();
+                if (!knight->roll.isActive()) knight->startMovingLeft();
                 break;
             
             case SDLK_w:

@@ -21,6 +21,8 @@ void createPlayer(RenderWindow& window, int groundHeight, int posX) {
     textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Health.png"), 0, 8, 2, 5));
     textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Pray.png"), 2, 10, 4, 5));
     textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/attack_from_air.png"), 0, 3, 2, 3));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/roll.png"), 0, 4, 2, 4));
+    textures.push_back(std::make_tuple(window.loadTexture("../graphics/player/knight/Attacks.png"), 7, 3, 8, 3));
     knight->initializeMovementLoops(textures);
 }
 
@@ -35,18 +37,34 @@ void Player::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t
     if (textures.size() > 7) this->initializeTextureLoop(this->heal, this->healMovement, textures[7], this->info.pngSize);
     if (textures.size() > 8) this->initializeTextureLoop(this->pray, this->prayMovement, textures[8], this->info.pngSize);
     if (textures.size() > 9) this->initializeTextureLoop(this->airAttack, this->airAttackMovement, textures[9], this->info.pngSize);
+    if (textures.size() > 10) this->initializeTextureLoop(this->roll, this->rollMovement, textures[10], this->info.pngSize);
+    if (textures.size() > 11) this->initializeTextureLoop(this->attack2, this->attack2Movement, textures[11], this->info.pngSize);
 }
 
 void Player::renderHUD(RenderWindow& window, std::vector<SDL_Texture*>& hudTextures) {
 
-    SDL_Rect healthBarBox;
-    size_t maxWidth = 200;
+    SDL_Rect vignetteRect;
+    this->vignetteSize = 470 - this->corruption / 5;
+    int vignetteSize = this->vignetteSize;
+    if (this->death.isActive()) vignetteSize -= 0.1;
+    vignetteRect.x = vignetteSize, vignetteRect.y = vignetteSize, vignetteRect.h = 1000 - 2 * vignetteSize, vignetteRect.w = 1000 - 2 * vignetteSize;
+    SDL_RenderCopy(window.getRenderer(), hudTextures[15], &vignetteRect, nullptr);
 
-    healthBarBox.x = 100, healthBarBox.y = window.getHeight() - 60, healthBarBox.w = maxWidth, healthBarBox.h = 15;
+    SDL_Rect healthBarBox;
+    size_t healthWidth = 300;
+
+    healthBarBox.x = 100, healthBarBox.y = window.getHeight() - 75, healthBarBox.w = healthWidth, healthBarBox.h = 15;
     SDL_RenderCopy(window.getRenderer(), hudTextures[10], nullptr, &healthBarBox);
-    // SDL_RenderCopy(window.getRenderer(), bar, nullptr, &healthBarBox);
-    healthBarBox.w = maxWidth * this->info.health / this->info.maxHealth;
+    healthBarBox.w = healthWidth * this->info.health / this->info.maxHealth;
     SDL_RenderCopy(window.getRenderer(), hudTextures[12], nullptr, &healthBarBox);
+
+    SDL_Rect corruptionBarBox;
+    size_t corruptionWidth = 200;
+
+    corruptionBarBox.x = 100, corruptionBarBox.y = window.getHeight() - 60, corruptionBarBox.w = corruptionWidth, corruptionBarBox.h = 15;
+    SDL_RenderCopy(window.getRenderer(), hudTextures[10], nullptr, &corruptionBarBox);
+    corruptionBarBox.w = corruptionWidth * this->corruption / this->maxCorruption;
+    SDL_RenderCopy(window.getRenderer(), hudTextures[16], nullptr, &corruptionBarBox);
 
     SDL_Rect iconBox;
     iconBox.x = 50, iconBox.y = window.getHeight() - 80, iconBox.w = 50, iconBox.h = 50;
@@ -77,6 +95,9 @@ bool Player::dealDamage(RenderWindow& window, bool airAttack) {
             if (enemy->info.centerCoordinates.x < this->info.centerCoordinates.x) enemy->info.facingRight = true;
             else enemy->info.facingRight = false;
             enemy->takeDamage(this->info.attackDamage);
+            this->corruption -= 1;
+            if (enemy->info.health - this->info.attackDamage <= 0) this->corruption -= 5;
+            if (this->corruption < 0) this->corruption = 0;
             return true;
         }
     }
@@ -91,9 +112,13 @@ void Player::renderPlayer(RenderWindow& window) {
     // std::cout << this->info.position.x << ", " << this->info.position.y << std::endl;
     // std::cout << this->info.velocityY << std::endl;
 
+    this->corruption += 0.01;
+
+    if (this->corruption >= this->maxCorruption) this->death.start();
+
     for (auto& pair : enemies) {
         Enemy* enemy = pair.first;
-        if (collision(&knight->info.hitbox, &enemy->info.hitbox)) {
+        if (enemy->dealsBodyDamage() && collision(&knight->info.hitbox, &enemy->info.hitbox)) {
             this->takeDamage(enemy->info.attackDamage);
         }
     }
@@ -102,6 +127,8 @@ void Player::renderPlayer(RenderWindow& window) {
         if (this->invincibilityFrame == 60) this->invincibilityFrame = -1;
         else this->invincibilityFrame++;
     }
+
+    float movementSpeed = this->info.movementSpeed;
 
     SDL_RendererFlip flipType = this->info.facingRight ? SDL_FLIP_NONE : SDL_FLIP_HORIZONTAL;
     if (this->death.isActive()) {
@@ -112,18 +139,37 @@ void Player::renderPlayer(RenderWindow& window) {
             // For now, we're just respawning right after death.
             this->info.health = 100;
             this->healGems = 9;
+            this->corruption = 0;
             this->invincibilityFrame = 0;
+            this->vignetteSize = 470;
         }
     } else if (this->hurt.isActive()) {
+        this->roll.stop();
         this->renderTexture(window, this->hurtMovement, flipType, false);
         if (this->hurtMovement.frame == 0) {
             this->hurt.stop();
             if (this->info.health <= 0) this->death.start();
         }
+    } else if (this->roll.isActive()) {
+        movementSpeed *= 2;
+        this->renderTexture(window, this->rollMovement, flipType, false);
+        if (this->roll.movement->frame == 0) {
+            if (this->isAirborne()) this->roll.disable();
+            this->roll.stop();
+        }
     } else if (this->attack.isActive()) {
-        if (this->attack.movement->frame == 3 * this->attack.movement->loopFrames) this->dealDamage(window, false);
-        this->renderTexture(window, this->attackMovement, flipType, false);
-        if (this->attackMovement.frame == 0) this->attack.stop();
+        if (!(this->attack.movement->frame == 0 && this->attack2.isActive())) {
+            if (this->attack.movement->frame == 3 * this->attack.movement->loopFrames) this->dealDamage(window, false);
+            this->renderTexture(window, this->attackMovement, flipType, false);
+            if (this->attack.movement->frame == 0) this->attack.stop();
+        } else {
+            if (this->attack2.movement->frame == 1 * this->attack2.movement->loopFrames) this->dealDamage(window, false);
+            this->renderTexture(window, this->attack2Movement, flipType, false);
+            if (this->attack2.movement->frame == 0) {
+                this->attack2.stop();
+                this->attack.stop();
+            }
+        }
     } else if (this->isAirborne()) {
         if (this->airAttack.isActive()) {
             if (this->dealDamage(window, true)) {
@@ -141,6 +187,7 @@ void Player::renderPlayer(RenderWindow& window) {
     } else if (this->heal.isActive()) {
         if (this->heal.movement->frame == 3 * this->heal.movement->loopFrames) {
             this->info.health = std::min(100, this->info.health + 30);
+            this->corruption += 20;
             this->healGems--;
         }
         this->renderTexture(window, this->healMovement, flipType, false);
@@ -155,17 +202,18 @@ void Player::renderPlayer(RenderWindow& window) {
         this->renderTexture(window, this->idleMovement, flipType, false);
     }
 
-    this->move(window);
-    this->obeyGravity();
+    this->move(window, movementSpeed);
+    if (!this->roll.isActive()) this->obeyGravity();
 
     // renderBox(window, this->info.hitbox);
     // SDL_Rect attackBox = buildAttackBox();
     // renderBox(window, attackBox);
 }
 
-void Player::startAttack() {
+void Player::startAttack(size_t attackNumber) {
     this->heal.stop();
-    this->attack.start();
+    if (attackNumber == 2) this->attack2.start();
+    else this->attack.start();
 }
 
 void Player::takeDamage(size_t damage) {
@@ -207,6 +255,7 @@ void Player::obeyGravity() {
     if ((this->info.position.y > this->info.groundHeight) || (this->info.position.y >= this->info.groundHeight && this->info.velocityY < 0)) {
         // If we are below the ground or touching it with negative velocity, stop jumping.
         this->jump.stop();
+        this->roll.enable();
         this->setCoordinate(false, this->info.groundHeight);
         this->info.velocityY = 0;
     } else if (this->info.velocityY > 0 || this->info.position.y < this->info.groundHeight) {
@@ -214,6 +263,15 @@ void Player::obeyGravity() {
         this->changeCoordinates(false, -this->info.velocityY);
         this->info.velocityY += GRAVITY;
         if (this->info.velocityY < -10) this->info.velocityY = -10;
+    }
+}
+
+void Player::startRoll() {
+    if (!this->death.isActive()) {
+        this->heal.stop();
+        this->info.velocityY = 0;
+        this->attack.stop();
+        this->roll.start();
     }
 }
 
