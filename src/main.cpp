@@ -115,7 +115,7 @@ int main(int argc, char* argv[]) {
             if (std::abs(position - knight->info.currentFrame.x) >= 50) createSlime(window, colors[index], groundHeight, position);
         }
 
-        if (std::rand() % 400 == 0) {
+        if (std::rand() % 800 == 0) {
             int position = std::rand() % window.getWidth();
             createSkeleton(window, groundHeight, position);
         }

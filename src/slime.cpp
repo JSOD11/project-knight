@@ -2,7 +2,7 @@
 #include "Slime.hpp"
 
 void createSlime(RenderWindow& window, std::string color, int groundHeight, int posX) {
-    Enemy* slime = new Enemy(true, 50, initializeInfo(55, 20, 1, Vector2i(128, 128), slimeHitbox, slimeAttackBox, 1, 5, groundHeight, posX));
+    Enemy* slime = new Enemy(true, 50, 1, initializeInfo(55, 20, 1, Vector2i(128, 128), slimeHitbox, slimeAttackBox, 1, 5, groundHeight, posX));
 
     // Load and initialize slime textures.
     // (start, N, rowLength, loopFrames)

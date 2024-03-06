@@ -7,7 +7,7 @@
 #include "Enemy.hpp"
 
 void createPlayer(RenderWindow& window, int groundHeight, int posX) {
-    knight = new Player(initializeInfo(100, 30, 2, Vector2i(128, 64), knightHitbox, knightAttackBox, 6, 15, groundHeight, posX));
+    knight = new Player(1, initializeInfo(100, 30, 2, Vector2i(128, 64), knightHitbox, knightAttackBox, 6, 15, groundHeight, posX));
 
     // The tuple has form: (texture, startPosition, numElements, rowLength, loopFrames)
     std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>> textures;
@@ -44,9 +44,9 @@ void Player::initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t
 void Player::renderHUD(RenderWindow& window, std::vector<SDL_Texture*>& hudTextures) {
 
     SDL_Rect vignetteRect;
-    this->vignetteSize = 470 - this->corruption / 5;
+    if (!this->death.isActive()) this->vignetteSize = 470 - this->corruption / 5;
     int vignetteSize = this->vignetteSize;
-    if (this->death.isActive()) vignetteSize -= 0.1;
+    if (this->death.isActive()) this->vignetteSize -= 0.2;
     vignetteRect.x = vignetteSize, vignetteRect.y = vignetteSize, vignetteRect.h = 1000 - 2 * vignetteSize, vignetteRect.w = 1000 - 2 * vignetteSize;
     SDL_RenderCopy(window.getRenderer(), hudTextures[15], &vignetteRect, nullptr);
 
@@ -89,6 +89,9 @@ bool Player::dealDamage(RenderWindow& window, bool airAttack) {
         attackBox = this->info.hitbox;
         attackBox.y += 10;
     } else attackBox = this->buildAttackBox();
+
+    bool dealtDamage = false;
+
     for (auto& pair : enemies) {
         Enemy* enemy = pair.first;
         if (collision(&attackBox, &enemy->info.hitbox)) {
@@ -98,11 +101,11 @@ bool Player::dealDamage(RenderWindow& window, bool airAttack) {
             this->corruption -= 1;
             if (enemy->info.health - this->info.attackDamage <= 0) this->corruption -= 5;
             if (this->corruption < 0) this->corruption = 0;
-            return true;
+            dealtDamage = true;
         }
     }
 
-    return false;
+    return dealtDamage;
 }
 
 // `renderPlayer()`

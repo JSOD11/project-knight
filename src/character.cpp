@@ -39,11 +39,11 @@ void Character::renderTexture(RenderWindow& window, Movement& movement, SDL_Rend
 }
 
 void Character::takeDamage(size_t damage) {
-    this->attack.stop();
-    this->run.stop();
-    // if (this->info.facingRight) this->changeCoordinates(true, -10);
-    // else this->changeCoordinates(true, 10);
-    this->hurt.start();
+    if (std::rand() % this->poise == 0) {
+        this->attack.stop();
+        this->run.stop();
+        this->hurt.start();
+    }
     this->info.health -= damage;
 }
 

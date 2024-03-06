@@ -41,6 +41,8 @@ void Enemy::renderEnemy(RenderWindow& window) {
     // std::cout << this->info.position.x << ", " << this->info.position.y << std::endl;
     // std::cout << this->info.velocityY << std::endl;
 
+    if (this->info.health <= 0) this->death.start();
+
     if (!this->birthEffect.isActive() && !this->deathEffect.isActive()) {
         if (std::abs(knight->info.centerCoordinates.x - this->info.centerCoordinates.x) <= this->sightDistance) {
             this->stopMovingRight();
@@ -55,7 +57,7 @@ void Enemy::renderEnemy(RenderWindow& window) {
         }
 
         if (collision(&this->info.currentFrame, &knight->info.hitbox)) {
-            if (std::rand() % 120 == 0) {
+            if (std::rand() % 60 == 0) {
                 this->attack.start();
             }
         }
@@ -81,7 +83,6 @@ void Enemy::renderEnemy(RenderWindow& window) {
         this->renderTexture(window, this->hurtMovement, flipType, false);
         if (this->hurtMovement.frame == 0) {
             this->hurt.stop();
-            if (this->info.health <= 0) this->death.start();
         }
     } else if (this->attack.isActive()) {
         if (this->attack.movement->frame == 3 * this->attack.movement->loopFrames) this->dealDamage();
