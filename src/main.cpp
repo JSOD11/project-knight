@@ -62,12 +62,12 @@ int main(int argc, char* argv[]) {
     Player* player = knight;
     (void) player;
 
-    // createSlime(window, "Blue", groundHeight, 500);
-    // createSlime(window, "Blue", groundHeight, 700);
-    // createSlime(window, "Red", groundHeight, 350);
-    // createSlime(window, "Green", groundHeight, 800);
+    createSlime(window, "Blue", groundHeight, 500);
+    createSlime(window, "Blue", groundHeight, 700);
+    createSlime(window, "Red", groundHeight, 350);
+    createSlime(window, "Green", groundHeight, 800);
 
-    // createSkeleton(window, groundHeight, 500);
+    createSkeleton(window, groundHeight, 500);
 
     createFireWizard(window, groundHeight, 600);
 
