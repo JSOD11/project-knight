@@ -6,9 +6,9 @@
 #include <iostream>
 #include <stdlib.h>
 
-struct Vector2f {
-    Vector2f() :x(0.0f), y(0.0f) {};
-    Vector2f(int x, int y) :x(x), y(y) {};
+struct Vector2i {
+    Vector2i() :x(0.0f), y(0.0f) {};
+    Vector2i(int x, int y) :x(x), y(y) {};
     int x, y;
 
     inline void print() {

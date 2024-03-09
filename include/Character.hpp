@@ -5,66 +5,115 @@
 #include <SDL_image.h>
 
 #include "RenderWindow.hpp"
-#include "Game.hpp"
+
+struct Info {
+    int health;
+    int maxHealth;
+    size_t attackDamage;
+    float sizeScaling;
+    Vector2i position;
+    SDL_Rect currentFrame;
+    Vector2i pngSize; // (width, height)
+    SDL_Rect hitbox;
+    int hitboxX;
+    SDL_Rect attackBox;
+    Vector2i centerCoordinates; // (centerX, centerY)
+    size_t movementSpeed;
+    size_t jumpForce;
+    int groundHeight;
+
+    bool facingRight;
+    bool movingRight;
+    bool movingLeft;
+    int velocityY;
+};
+
+struct Movement {
+    SDL_Texture* texture;
+    std::vector<SDL_Rect> frameVector;
+    size_t frame;
+    // Higher value for loopFrames = slower movement.
+    bool disabled;
+    size_t loopFrames;
+    size_t executionFrame;
+    bool isActive;
+};
+
+struct Command {
+    inline void start() {
+        movement->isActive = true;
+    }
+
+    inline void stop() {
+        movement->isActive = false;
+        movement->frame = 0;
+    }
+
+    inline bool isActive() const {
+        return movement->isActive;
+    }
+
+    inline void enable() {
+        movement->disabled = false;
+    }
+
+    inline void disable() {
+        movement->disabled = true;
+    }
+
+    inline bool isDisabled() {
+        return movement->disabled;
+    }
+
+    Movement* movement;
+};
 
 class Character {
-    private:
-        Vector2f position;
-        SDL_Rect currentFrame;
-        size_t width;
-        size_t height;
-        float movementSpeed;
-        bool movingLeft;
-        bool movingRight;
+    protected:
 
-        // All frames are facing right, so right is the default.
-        // If not facing right, then we flip the animations.
-        bool facingRight;
+        // TODO: Take these movements and put them into a list.
+        // RenderCharacter processes each movement one by one in
+        // order of priority.
 
-        float velocityY;
-        float jumpForce;
-        int groundHeight;
+        size_t poise;
 
         Movement idleMovement;
         Movement attackMovement;
         Movement runMovement;
-        Movement crouchMovement;
-        Movement jumpMovement;
-        Movement healMovement;
-        Movement prayMovement;
-        Movement airAttackMovement;
+        Movement hurtMovement;
+        Movement deathMovement;
     
     public:
-        Character(Vector2f position, SDL_Rect startingFrame, size_t width, size_t height, float movementSpeed, float jumpForce, int groundHeight);
-        void initializeMovementLoops(std::vector<std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t>>& textures);
-        void renderCharacter(RenderWindow& window);
-        void renderTexture(RenderWindow& window, Movement& movement, SDL_RendererFlip& flipType);
+        Info info;
+
+        Character(size_t poise, Info info) : poise(poise), info(info) {};
+        void initializeTextureLoop(Command& command, Movement& movement, std::tuple<SDL_Texture*, size_t, size_t, size_t, size_t, size_t>& texture, Vector2i pngSize);
+        void renderTexture(RenderWindow& window, Movement& movement, SDL_RendererFlip& flipType, bool hitbox);
 
         Command idle;
         Command attack;
-        void startAttack();
         Command run;
+        Command hurt;
+        Command death;
+        virtual void takeDamage(size_t damage);
 
-        void startMovingRight();
-        void startMovingLeft();
-        void move(RenderWindow& window);
-        bool isMovingRight();
-        bool isMovingLeft();
-        void stopMovingRight();
-        void stopMovingLeft();
+        virtual bool canMove();
+        virtual bool canChangeDirection();
+        virtual bool isImmobile();
+        virtual void move(RenderWindow& window, float movementSpeed);
+        virtual void startMovingRight();
+        virtual void startMovingLeft();
+        virtual void changeCoordinates(bool x, int delta);
+        virtual void setCoordinate(bool x, int coordinate);
+        virtual bool isMovingRight();
+        virtual bool isMovingLeft();
+        virtual void stopMovingRight();
+        virtual void stopMovingLeft();
+        virtual SDL_Rect buildAttackBox();
 
-        Command crouch;
-        Command jump;
-
-        void startJump();
-        bool isAirborne();
-        void obeyGravity();
-
-        Command heal;
-        Command pray;
-        Command airAttack;
-
-        bool isImmobile();
+        virtual void renderBox(RenderWindow& window, SDL_Rect& box);
 };
+
+Info initializeInfo(int health, size_t attackDamage, float sizeScaling, Vector2i pngSize, SDL_Rect hitbox, SDL_Rect attackBox, size_t movementSpeed, size_t jumpForce, int groundHeight, size_t posX);
 
 #endif // CHARACTER_H

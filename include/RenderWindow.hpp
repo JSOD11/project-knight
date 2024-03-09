@@ -4,7 +4,7 @@
 #include <SDL.h>
 #include <SDL_image.h>
 
-#include "Entity.hpp"
+#include "Block.hpp"
 
 class RenderWindow {
     private:
@@ -18,7 +18,7 @@ class RenderWindow {
         SDL_Window* getWindow();
         void clearWindow();
         void destroyWindow();
-        void renderStatic(const Entity& entity);
+        void renderStatic(const Block& Block);
         void display();
         SDL_Texture* loadTexture(const char* filePath);
         void destroyTexture(SDL_Texture* texture);
