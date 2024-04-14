@@ -25,3 +25,7 @@ You may need to install the SDL2 and SDL2 image libraries.
 - L : Heal
 
 - S + J while in the air : Air attack
+
+## Credits
+
+I used Codergopher's youtube tutorial to get started with SDL2. The textures used are made freely available by the talented artists of itch.io and craftpix.net.
