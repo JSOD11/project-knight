@@ -2,9 +2,7 @@
 
 A small 2D combat-focused game demo made purely with C++ and SDL2.
 
-
-https://github.com/JSOD11/project-knight/assets/55005116/9068ddbd-8bad-46a3-a722-b9ba65851103
-
+https://github.com/JSOD11/project-knight/assets/55005116/97d78044-b08d-467d-a84d-feef5c40886a
 
 ## Usage
 
