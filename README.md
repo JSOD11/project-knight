@@ -8,6 +8,7 @@ https://github.com/JSOD11/project-knight/assets/55005116/97d78044-b08d-467d-a84d
 
 ```
 cd src
+make
 ./main
 ```
 
